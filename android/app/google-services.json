@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "276571619286",
+    "project_id": "learnloop-c50b5",
+    "storage_bucket": "learnloop-c50b5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:276571619286:android:bb7f5e9f5a92e676abee77",
+        "android_client_info": {
+          "package_name": "com.arrowstack.learning_progress_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAkQVAFboKYpgHAWvaLgReEwnEnwrVRnyM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
