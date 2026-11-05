@@ -5,23 +5,33 @@ class LessonModel {
   final String courseId;
   final String title;
   final String description;
-  final int orderIndex;
-  final int durationMinutes;
+  final int order;
+  final String type; // "video" | "text" | "pdf"
   final String? videoUrl;
-  final String markdownContent;
-  final bool hasQuiz;
+  final String content;
+  final String? attachmentUrl;
+  final int durationMinutes;
 
-  const LessonModel({
+  LessonModel({
     required this.id,
     required this.courseId,
     required this.title,
-    required this.description,
-    required this.orderIndex,
-    required this.durationMinutes,
+    this.description = '',
+    int? order,
+    int? orderIndex,
+    String? type,
     this.videoUrl,
-    required this.markdownContent,
-    this.hasQuiz = false,
-  });
+    String? content,
+    String? markdownContent,
+    this.attachmentUrl,
+    this.durationMinutes = 10,
+  })  : order = order ?? orderIndex ?? 0,
+        type = type ?? (videoUrl != null && videoUrl.isNotEmpty ? 'video' : 'text'),
+        content = content ?? markdownContent ?? '';
+
+  // Compatibility getters
+  int get orderIndex => order;
+  String get markdownContent => content;
 
   factory LessonModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> snapshot) {
     final data = snapshot.data() ?? {};
@@ -30,11 +40,12 @@ class LessonModel {
       courseId: data['courseId'] ?? '',
       title: data['title'] ?? 'Lesson',
       description: data['description'] ?? '',
-      orderIndex: (data['orderIndex'] as num?)?.toInt() ?? 0,
-      durationMinutes: (data['durationMinutes'] as num?)?.toInt() ?? 10,
+      order: (data['order'] as num?)?.toInt() ?? (data['orderIndex'] as num?)?.toInt() ?? 0,
+      type: data['type'] ?? (data['videoUrl'] != null && (data['videoUrl'] as String).isNotEmpty ? 'video' : 'text'),
       videoUrl: data['videoUrl'],
-      markdownContent: data['markdownContent'] ?? '',
-      hasQuiz: data['hasQuiz'] ?? false,
+      content: data['content'] ?? data['markdownContent'] ?? '',
+      attachmentUrl: data['attachmentUrl'],
+      durationMinutes: (data['durationMinutes'] as num?)?.toInt() ?? 10,
     );
   }
 
@@ -43,11 +54,12 @@ class LessonModel {
       'courseId': courseId,
       'title': title,
       'description': description,
-      'orderIndex': orderIndex,
-      'durationMinutes': durationMinutes,
+      'order': order,
+      'type': type,
       'videoUrl': videoUrl,
-      'markdownContent': markdownContent,
-      'hasQuiz': hasQuiz,
+      'content': content,
+      'attachmentUrl': attachmentUrl,
+      'durationMinutes': durationMinutes,
     };
   }
 }

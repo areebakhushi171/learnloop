@@ -40,40 +40,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final user = authViewModel.user;
 
     return Scaffold(
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: 0,
-        onDestinationSelected: (idx) {
-          if (idx == 1) context.go('/progress');
-          if (idx == 2) context.go('/reminders');
-          if (idx == 3) context.go('/profile');
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.analytics_outlined),
-            selectedIcon: Icon(Icons.analytics_rounded),
-            label: 'Progress',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.notifications_outlined),
-            selectedIcon: Icon(Icons.notifications_rounded),
-            label: 'Reminders',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person_rounded),
-            label: 'Profile',
-          ),
-        ],
-      ),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: homeViewModel.refresh,
           child: CustomScrollView(
+            key: const PageStorageKey('home_scroll_key'),
             slivers: [
               // Header
               SliverPadding(
@@ -111,7 +82,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       final enrollments = snapshot.data ?? [];
                       if (enrollments.isEmpty) return const SizedBox.shrink();
 
-                      // Get latest active enrollment
                       enrollments.sort((a, b) => b.lastAccessedAt.compareTo(a.lastAccessedAt));
                       final activeEnrollment = enrollments.first;
 
@@ -167,7 +137,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                         minimumSize: const Size(140, 38),
                                         padding: const EdgeInsets.symmetric(horizontal: 16),
                                       ),
-                                      onPressed: () => context.go('/course/${course.id}'),
+                                      onPressed: () => context.push('/course/${course.id}'),
                                       icon: const Icon(Icons.play_arrow_rounded, size: 20),
                                       label: const Text('Resume'),
                                     ),
@@ -280,7 +250,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     animation: _tabController,
                     builder: (context, child) {
                       if (_tabController.index == 1 && user != null) {
-                        // My Enrolled Courses Tab
                         return StreamBuilder<List<EnrollmentModel>>(
                           stream: courseRepo.streamUserEnrollments(user.uid),
                           builder: (context, enrollSnap) {
@@ -331,7 +300,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         );
                       }
 
-                      // All Courses Tab
                       return SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceLg),
                         sliver: SliverList(
@@ -370,7 +338,7 @@ class _CourseCard extends StatelessWidget {
 
     return GlassContainer(
       padding: EdgeInsets.zero,
-      onTap: () => context.go('/course/${course.id}'),
+      onTap: () => context.push('/course/${course.id}'),
       child: Row(
         children: [
           Hero(
@@ -465,7 +433,7 @@ class _EnrolledCourseCard extends StatelessWidget {
 
     return GlassContainer(
       padding: const EdgeInsets.all(AppTheme.spaceSm),
-      onTap: () => context.go('/course/${course.id}'),
+      onTap: () => context.push('/course/${course.id}'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

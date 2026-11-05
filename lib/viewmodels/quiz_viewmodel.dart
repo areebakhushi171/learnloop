@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
-import '../core/constants/app_constants.dart';
 import '../data/models/quiz_model.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/course_repository.dart';
@@ -14,11 +13,11 @@ class QuizViewModel extends ChangeNotifier {
   bool _isLoading = true;
   QuizModel? _quiz;
   int _currentQuestionIndex = 0;
-  final Map<int, int> _selectedAnswers = {};
+  final Map<int, int> _selectedAnswers = {}; // questionIndex -> selectedIndex
   int _remainingSeconds = 180;
   bool _isFinished = false;
-  int _scorePercent = 0;
-  int _earnedXp = 0;
+  double _scorePercent = 0.0;
+  int _correctCount = 0;
   bool _isPassed = false;
   Timer? _timer;
 
@@ -37,9 +36,10 @@ class QuizViewModel extends ChangeNotifier {
   Map<int, int> get selectedAnswers => _selectedAnswers;
   int get remainingSeconds => _remainingSeconds;
   bool get isFinished => _isFinished;
-  int get scorePercent => _scorePercent;
-  int get earnedXp => _earnedXp;
+  double get scorePercent => _scorePercent;
+  int get correctCount => _correctCount;
   bool get isPassed => _isPassed;
+  int get earnedXp => _isPassed ? (_correctCount * 10) + 100 : (_correctCount * 10);
 
   @override
   void dispose() {
@@ -51,27 +51,30 @@ class QuizViewModel extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final quiz = await _courseRepository.getQuizForCourse(courseId);
-    if (quiz != null) {
-      _quiz = quiz;
-      _remainingSeconds = quiz.timeLimitSeconds;
-      _isLoading = false;
-      notifyListeners();
-      _startTimer();
-    } else {
+    try {
+      final quiz = await _courseRepository.getQuizForCourse(courseId);
+      if (quiz != null) {
+        _quiz = quiz;
+        _remainingSeconds = quiz.timeLimitMinutes * 60;
+        _startTimer();
+      }
+    } catch (_) {
+      _quiz = null;
+    } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
   void _startTimer() {
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_remainingSeconds > 0) {
         _remainingSeconds--;
         notifyListeners();
       } else {
         _timer?.cancel();
-        finishQuiz(null);
+        finishQuiz();
       }
     });
   }
@@ -89,40 +92,51 @@ class QuizViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> finishQuiz(String? userId) async {
+  void previousQuestion() {
+    if (_currentQuestionIndex > 0) {
+      _currentQuestionIndex--;
+      notifyListeners();
+    }
+  }
+
+  Future<void> finishQuiz([String? userId]) async {
     _timer?.cancel();
     final currentQuiz = _quiz;
     if (currentQuiz == null) return;
 
     int correct = 0;
     for (int i = 0; i < currentQuiz.questions.length; i++) {
-      if (_selectedAnswers[i] == currentQuiz.questions[i].correctOptionIndex) {
+      final selected = _selectedAnswers[i];
+      if (selected != null && selected == currentQuiz.questions[i].correctIndex) {
         correct++;
       }
     }
 
-    _scorePercent = ((correct / currentQuiz.questions.length) * 100).toInt();
-    _earnedXp = (correct * AppConstants.xpPerQuizQuestionCorrect) +
-        (_scorePercent == 100 ? AppConstants.xpBonusPerfectQuiz : 0);
-    _isPassed = _scorePercent >= currentQuiz.passScorePercent;
+    _correctCount = correct;
+    _scorePercent = currentQuiz.questions.isNotEmpty
+        ? (correct / currentQuiz.questions.length) * 100
+        : 0.0;
+    _isPassed = _scorePercent >= currentQuiz.passingScore;
     _isFinished = true;
     notifyListeners();
 
-    if (userId != null) {
+    final uid = userId ?? _authRepository.currentUser?.uid;
+    if (uid != null) {
+      final stringAnswers = _selectedAnswers.map((k, v) => MapEntry(k.toString(), v));
       final attempt = QuizAttemptModel(
         id: const Uuid().v4(),
-        quizId: currentQuiz.id,
         courseId: courseId,
-        scorePercent: _scorePercent,
+        quizId: currentQuiz.id,
+        score: _scorePercent,
+        correctCount: correct,
         totalQuestions: currentQuiz.questions.length,
-        correctQuestions: correct,
-        selectedAnswers: _selectedAnswers,
-        earnedXp: _earnedXp,
-        completedAt: DateTime.now(),
+        answers: stringAnswers,
+        timeTakenSeconds: (currentQuiz.timeLimitMinutes * 60) - _remainingSeconds,
+        passed: _isPassed,
+        createdAt: DateTime.now(),
       );
 
-      await _courseRepository.recordQuizAttempt(userId, attempt);
-      await _authRepository.updateStreakAndXp(userId, xpToAdd: _earnedXp);
+      await _courseRepository.recordQuizAttempt(uid, attempt);
     }
   }
 }

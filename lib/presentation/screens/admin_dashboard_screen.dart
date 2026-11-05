@@ -7,7 +7,6 @@ import '../../core/theme/app_colors.dart';
 import '../../data/models/course_model.dart';
 import '../../data/models/lesson_model.dart';
 import '../../data/models/user_model.dart';
-import '../../data/services/firestore_seeder.dart';
 import '../../viewmodels/admin_viewmodel.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/home_viewmodel.dart';
@@ -443,19 +442,11 @@ class _AdminOverviewTab extends StatelessWidget {
                               ),
                               child: Center(
                                 child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     const Icon(Icons.school_outlined, size: 48, color: Colors.grey),
                                     const SizedBox(height: 12),
-                                    const Text('No courses found in database.'),
-                                    const SizedBox(height: 12),
-                                    ElevatedButton.icon(
-                                      onPressed: () async {
-                                        final seeder = FirestoreSeeder();
-                                        await seeder.seedInitialCoursesIfEmpty();
-                                      },
-                                      icon: const Icon(Icons.download_rounded),
-                                      label: const Text('Seed Sample Courses'),
-                                    ),
+                                    const Text('No courses found in database. Create courses from the Courses tab.'),
                                   ],
                                 ),
                               ),
@@ -870,10 +861,19 @@ class _AdminCourseManagementTab extends StatelessWidget {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 const Text('Lectures List', style: TextStyle(fontWeight: FontWeight.bold)),
-                                TextButton.icon(
-                                  onPressed: () => _showLectureDialog(context, course.id),
-                                  icon: const Icon(Icons.add, size: 18),
-                                  label: const Text('Add Lecture'),
+                                Row(
+                                  children: [
+                                    TextButton.icon(
+                                      onPressed: () => context.push('/admin/course/${course.id}/quizzes'),
+                                      icon: const Icon(Icons.quiz_rounded, size: 16),
+                                      label: const Text('Quizzes'),
+                                    ),
+                                    TextButton.icon(
+                                      onPressed: () => _showLectureDialog(context, course.id),
+                                      icon: const Icon(Icons.add, size: 18),
+                                      label: const Text('Add Lecture'),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),

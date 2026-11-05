@@ -74,7 +74,6 @@ class FirebaseAuthRepository implements AuthRepository {
       return profile;
     }
 
-    // Self-healing: if an existing Firebase Auth account has no Firestore doc, initialize as student
     final now = DateTime.now();
     final displayName = (user.displayName != null && user.displayName!.isNotEmpty)
         ? user.displayName!
@@ -83,27 +82,31 @@ class FirebaseAuthRepository implements AuthRepository {
     final newModel = UserModel(
       uid: user.uid,
       email: user.email ?? email.trim(),
-      displayName: displayName,
+      name: displayName,
       role: 'student',
-      totalXp: 0,
-      streakDays: 1,
+      xp: 0,
+      level: 1,
+      streak: 1,
+      totalStudySeconds: 0,
       dailyGoalMinutes: 30,
       preferredTheme: 'system',
       accentPalette: 'deepIndigo',
       languageCode: 'en',
       bookmarkedCourseIds: const [],
       createdAt: now,
-      lastActiveDate: now,
+      lastStudyDate: now,
     );
 
     await _firestore.collection('users').doc(user.uid).set({
       'email': user.email ?? email.trim(),
-      'displayName': displayName,
+      'name': displayName,
       'photoUrl': user.photoURL,
       'role': 'student',
-      'totalXp': 0,
-      'streakDays': 1,
-      'lastActiveDate': FieldValue.serverTimestamp(),
+      'xp': 0,
+      'level': 1,
+      'streak': 1,
+      'lastStudyDate': FieldValue.serverTimestamp(),
+      'totalStudySeconds': 0,
       'dailyGoalMinutes': 30,
       'preferredTheme': 'system',
       'accentPalette': 'deepIndigo',
@@ -132,27 +135,31 @@ class FirebaseAuthRepository implements AuthRepository {
     final newModel = UserModel(
       uid: user.uid,
       email: email.trim(),
-      displayName: displayName.trim(),
-      role: 'student', // Strictly assigned student role
-      totalXp: 0,
-      streakDays: 0,
+      name: displayName.trim(),
+      role: 'student',
+      xp: 0,
+      level: 1,
+      streak: 0,
+      totalStudySeconds: 0,
       dailyGoalMinutes: 30,
       preferredTheme: 'system',
       accentPalette: 'deepIndigo',
       languageCode: 'en',
       bookmarkedCourseIds: const [],
       createdAt: now,
-      lastActiveDate: now,
+      lastStudyDate: now,
     );
 
     await _firestore.collection('users').doc(user.uid).set({
       'email': email.trim(),
-      'displayName': displayName.trim(),
+      'name': displayName.trim(),
       'photoUrl': null,
       'role': 'student',
-      'totalXp': 0,
-      'streakDays': 0,
-      'lastActiveDate': FieldValue.serverTimestamp(),
+      'xp': 0,
+      'level': 1,
+      'streak': 0,
+      'lastStudyDate': FieldValue.serverTimestamp(),
+      'totalStudySeconds': 0,
       'dailyGoalMinutes': 30,
       'preferredTheme': 'system',
       'accentPalette': 'deepIndigo',
@@ -186,7 +193,7 @@ class FirebaseAuthRepository implements AuthRepository {
     if (photoUrl != null) await user.updatePhotoURL(photoUrl);
 
     final Map<String, dynamic> updates = {};
-    if (displayName != null) updates['displayName'] = displayName;
+    if (displayName != null) updates['name'] = displayName;
     if (photoUrl != null) updates['photoUrl'] = photoUrl;
 
     if (updates.isNotEmpty) {
@@ -233,17 +240,17 @@ class FirebaseAuthRepository implements AuthRepository {
       if (!snapshot.exists) return;
 
       final data = snapshot.data() ?? {};
-      final int currentXp = (data['totalXp'] as num?)?.toInt() ?? 0;
-      final int currentStreak = (data['streakDays'] as num?)?.toInt() ?? 0;
-      final Timestamp? lastActiveTs = data['lastActiveDate'] as Timestamp?;
+      final int currentXp = (data['xp'] as num?)?.toInt() ?? 0;
+      final int currentStreak = (data['streak'] as num?)?.toInt() ?? 0;
+      final Timestamp? lastStudyTs = data['lastStudyDate'] as Timestamp?;
 
       int newStreak = currentStreak;
       final now = DateTime.now();
 
-      if (lastActiveTs == null) {
+      if (lastStudyTs == null) {
         newStreak = 1;
       } else {
-        final lastDate = lastActiveTs.toDate();
+        final lastDate = lastStudyTs.toDate();
         final diffDays = DateTime(now.year, now.month, now.day)
             .difference(DateTime(lastDate.year, lastDate.month, lastDate.day))
             .inDays;
@@ -255,10 +262,14 @@ class FirebaseAuthRepository implements AuthRepository {
         }
       }
 
+      final int newXp = currentXp + xpToAdd;
+      final int newLevel = (newXp ~/ 500) + 1;
+
       transaction.update(docRef, {
-        'totalXp': currentXp + xpToAdd,
-        'streakDays': newStreak,
-        'lastActiveDate': FieldValue.serverTimestamp(),
+        'xp': newXp,
+        'level': newLevel,
+        'streak': newStreak,
+        'lastStudyDate': FieldValue.serverTimestamp(),
       });
     });
   }

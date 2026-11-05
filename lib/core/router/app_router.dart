@@ -1,7 +1,13 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../presentation/screens/auth_screen.dart';
 import '../../presentation/screens/admin_dashboard_screen.dart';
+import '../../presentation/screens/admin_quiz_list_screen.dart';
+import '../../presentation/screens/admin_quiz_builder_screen.dart';
+import '../../presentation/screens/admin_question_manager_screen.dart';
+import '../../presentation/screens/admin_question_editor_screen.dart';
 import '../../presentation/screens/course_details_screen.dart';
 import '../../presentation/screens/home_screen.dart';
 import '../../presentation/screens/lesson_player_screen.dart';
@@ -10,10 +16,11 @@ import '../../presentation/screens/progress_analytics_screen.dart';
 import '../../presentation/screens/quiz_screen.dart';
 import '../../presentation/screens/reminders_screen.dart';
 import '../../presentation/screens/splash_onboarding_screen.dart';
+import '../constants/route_names.dart';
 
 GoRouter createRouter(AuthViewModel authViewModel) {
   return GoRouter(
-    initialLocation: '/splash',
+    initialLocation: RouteNames.splash,
     refreshListenable: authViewModel,
     redirect: (context, state) {
       if (!authViewModel.isInitialized) {
@@ -24,63 +31,140 @@ GoRouter createRouter(AuthViewModel authViewModel) {
       final user = authViewModel.user;
       final location = state.matchedLocation;
 
-      final isAuthRoute = location == '/auth' ||
-          location == '/splash' ||
-          location == '/onboarding';
+      final isAuthRoute = location == RouteNames.auth ||
+          location == RouteNames.splash ||
+          location == RouteNames.onboarding;
 
-      // 1. Unauthenticated users must be redirected to /auth
       if (!isLoggedIn) {
-        if (!isAuthRoute) return '/auth';
+        if (!isAuthRoute) return RouteNames.auth;
         return null;
       }
 
-      // 2. Wait until user profile document is loaded
       if (user == null) {
         return null;
       }
 
-      // 3. Authenticated user opening auth/splash/onboarding -> redirect to respective role dashboard
-      if (isAuthRoute) {
-        return user.isAdmin ? '/admin-dashboard' : '/home';
+      if (user.isDisabled) {
+        return RouteNames.auth;
       }
 
-      // 4. Role-based Route Protection
-      if (location == '/admin-dashboard' && !user.isAdmin) {
-        return '/home';
+      if (isAuthRoute) {
+        return user.isAdmin ? RouteNames.adminDashboard : RouteNames.home;
+      }
+
+      if (location == RouteNames.adminDashboard && !user.isAdmin) {
+        return RouteNames.home;
       }
 
       return null;
     },
     routes: [
       GoRoute(
-        path: '/splash',
+        path: RouteNames.splash,
         builder: (context, state) => const SplashScreen(),
       ),
       GoRoute(
-        path: '/onboarding',
+        path: RouteNames.onboarding,
         builder: (context, state) => const OnboardingScreen(),
       ),
       GoRoute(
-        path: '/auth',
+        path: RouteNames.auth,
         builder: (context, state) => const AuthScreen(),
       ),
       GoRoute(
-        path: '/admin-dashboard',
+        path: RouteNames.adminDashboard,
         builder: (context, state) => const AdminDashboardScreen(),
       ),
+      
+      // Admin Quiz Management Routes
       GoRoute(
-        path: '/home',
-        builder: (context, state) => const HomeScreen(),
+        path: '/admin/course/:courseId/quizzes',
+        builder: (context, state) {
+          final courseId = state.pathParameters['courseId'] ?? '';
+          return AdminQuizListScreen(courseId: courseId);
+        },
       ),
       GoRoute(
-        path: '/course/:id',
+        path: '/admin/course/:courseId/quiz/form',
+        builder: (context, state) {
+          final courseId = state.pathParameters['courseId'] ?? '';
+          return AdminQuizBuilderScreen(courseId: courseId);
+        },
+      ),
+      GoRoute(
+        path: '/admin/course/:courseId/quiz/:quizId/edit',
+        builder: (context, state) {
+          final courseId = state.pathParameters['courseId'] ?? '';
+          final quizId = state.pathParameters['quizId'] ?? '';
+          return AdminQuizBuilderScreen(courseId: courseId, quizId: quizId);
+        },
+      ),
+      GoRoute(
+        path: '/admin/course/:courseId/quiz/:quizId/questions',
+        builder: (context, state) {
+          final courseId = state.pathParameters['courseId'] ?? '';
+          final quizId = state.pathParameters['quizId'] ?? '';
+          return AdminQuestionManagerScreen(courseId: courseId, quizId: quizId);
+        },
+      ),
+      GoRoute(
+        path: '/admin/course/:courseId/quiz/:quizId/question/new',
+        builder: (context, state) {
+          final courseId = state.pathParameters['courseId'] ?? '';
+          final quizId = state.pathParameters['quizId'] ?? '';
+          return AdminQuestionEditorScreen(courseId: courseId, quizId: quizId);
+        },
+      ),
+
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return StudentShellScaffold(navigationShell: navigationShell);
+        },
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RouteNames.home,
+                builder: (context, state) => const HomeScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RouteNames.progress,
+                builder: (context, state) => const ProgressAnalyticsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RouteNames.reminders,
+                builder: (context, state) => const RemindersScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RouteNames.profile,
+                builder: (context, state) => const ProfileScreen(),
+              ),
+            ],
+          ),
+        ],
+      ),
+
+      GoRoute(
+        path: RouteNames.courseDetails,
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
           return CourseDetailsScreen(courseId: id);
         },
       ),
       GoRoute(
-        path: '/course/:courseId/lesson/:lessonId',
+        path: RouteNames.lessonPlayer,
         builder: (context, state) {
           final courseId = state.pathParameters['courseId'] ?? '';
           final lessonId = state.pathParameters['lessonId'] ?? '';
@@ -88,24 +172,83 @@ GoRouter createRouter(AuthViewModel authViewModel) {
         },
       ),
       GoRoute(
-        path: '/quiz/:courseId',
+        path: RouteNames.quiz,
         builder: (context, state) {
           final courseId = state.pathParameters['courseId'] ?? '';
           return QuizScreen(courseId: courseId);
         },
       ),
-      GoRoute(
-        path: '/progress',
-        builder: (context, state) => const ProgressAnalyticsScreen(),
-      ),
-      GoRoute(
-        path: '/reminders',
-        builder: (context, state) => const RemindersScreen(),
-      ),
-      GoRoute(
-        path: '/profile',
-        builder: (context, state) => const ProfileScreen(),
-      ),
     ],
   );
+}
+
+class StudentShellScaffold extends StatefulWidget {
+  final StatefulNavigationShell navigationShell;
+
+  const StudentShellScaffold({super.key, required this.navigationShell});
+
+  @override
+  State<StudentShellScaffold> createState() => _StudentShellScaffoldState();
+}
+
+class _StudentShellScaffoldState extends State<StudentShellScaffold> {
+  DateTime? _lastBackPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+
+        if (widget.navigationShell.currentIndex != 0) {
+          widget.navigationShell.goBranch(0, initialLocation: false);
+        } else {
+          final now = DateTime.now();
+          if (_lastBackPressed == null || now.difference(_lastBackPressed!) > const Duration(seconds: 2)) {
+            _lastBackPressed = now;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Press back again to exit LearnLoop'), duration: Duration(seconds: 2)),
+            );
+          } else {
+            SystemNavigator.pop();
+          }
+        }
+      },
+      child: Scaffold(
+        body: widget.navigationShell,
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: widget.navigationShell.currentIndex,
+          onDestinationSelected: (index) {
+            widget.navigationShell.goBranch(
+              index,
+              initialLocation: index == widget.navigationShell.currentIndex,
+            );
+          },
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home_rounded),
+              label: 'Home',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.analytics_outlined),
+              selectedIcon: Icon(Icons.analytics_rounded),
+              label: 'Progress',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.notifications_outlined),
+              selectedIcon: Icon(Icons.notifications_rounded),
+              label: 'Reminders',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.person_outline_rounded),
+              selectedIcon: Icon(Icons.person_rounded),
+              label: 'Profile',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

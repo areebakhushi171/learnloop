@@ -2,106 +2,130 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserModel {
   final String uid;
+  final String name;
   final String email;
-  final String displayName;
   final String? photoUrl;
-  final String role; // 'student' or 'admin'
-  final int totalXp;
-  final int streakDays;
-  final DateTime? lastActiveDate;
+  final String role; // "student" | "admin"
+  final int xp;
+  final int level;
+  final int streak;
+  final DateTime? lastStudyDate;
+  final int totalStudySeconds;
   final int dailyGoalMinutes;
-  final String preferredTheme; // 'system', 'light', 'dark'
+  final String preferredTheme; // "system" | "light" | "dark"
   final String accentPalette;
-  final String languageCode; // 'en' or 'ur'
+  final String languageCode; // "en" | "ur"
   final List<String> bookmarkedCourseIds;
   final DateTime createdAt;
+  final bool isDisabled;
 
   const UserModel({
     required this.uid,
+    required this.name,
     required this.email,
-    required this.displayName,
     this.photoUrl,
-    this.role = 'student',
-    this.totalXp = 0,
-    this.streakDays = 0,
-    this.lastActiveDate,
+    required this.role,
+    required this.xp,
+    required this.level,
+    required this.streak,
+    this.lastStudyDate,
+    required this.totalStudySeconds,
     this.dailyGoalMinutes = 30,
     this.preferredTheme = 'system',
     this.accentPalette = 'deepIndigo',
     this.languageCode = 'en',
     this.bookmarkedCourseIds = const [],
     required this.createdAt,
+    this.isDisabled = false,
   });
 
   bool get isAdmin => role == 'admin';
   bool get isStudent => role == 'student';
 
+  // Compatibility getters
+  String get displayName => name;
+  int get totalXp => xp;
+  int get streakDays => streak;
+  DateTime? get lastActiveDate => lastStudyDate;
+
   factory UserModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> snapshot) {
     final data = snapshot.data() ?? {};
     return UserModel(
       uid: snapshot.id,
+      name: data['name'] ?? data['displayName'] ?? 'Student',
       email: data['email'] ?? '',
-      displayName: data['displayName'] ?? 'Student',
       photoUrl: data['photoUrl'],
       role: data['role'] ?? 'student',
-      totalXp: (data['totalXp'] as num?)?.toInt() ?? 0,
-      streakDays: (data['streakDays'] as num?)?.toInt() ?? 0,
-      lastActiveDate: (data['lastActiveDate'] as Timestamp?)?.toDate(),
+      xp: (data['xp'] as num?)?.toInt() ?? (data['totalXp'] as num?)?.toInt() ?? 0,
+      level: (data['level'] as num?)?.toInt() ?? 1,
+      streak: (data['streak'] as num?)?.toInt() ?? (data['streakDays'] as num?)?.toInt() ?? 0,
+      lastStudyDate: (data['lastStudyDate'] as Timestamp?)?.toDate() ?? (data['lastActiveDate'] as Timestamp?)?.toDate(),
+      totalStudySeconds: (data['totalStudySeconds'] as num?)?.toInt() ?? 0,
       dailyGoalMinutes: (data['dailyGoalMinutes'] as num?)?.toInt() ?? 30,
       preferredTheme: data['preferredTheme'] ?? 'system',
       accentPalette: data['accentPalette'] ?? 'deepIndigo',
       languageCode: data['languageCode'] ?? 'en',
       bookmarkedCourseIds: List<String>.from(data['bookmarkedCourseIds'] ?? []),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      isDisabled: data['isDisabled'] ?? false,
     );
   }
 
   Map<String, dynamic> toFirestore() {
     return {
+      'name': name,
       'email': email,
-      'displayName': displayName,
       'photoUrl': photoUrl,
       'role': role,
-      'totalXp': totalXp,
-      'streakDays': streakDays,
-      'lastActiveDate': lastActiveDate != null ? Timestamp.fromDate(lastActiveDate!) : null,
+      'xp': xp,
+      'level': level,
+      'streak': streak,
+      'lastStudyDate': lastStudyDate != null ? Timestamp.fromDate(lastStudyDate!) : null,
+      'totalStudySeconds': totalStudySeconds,
       'dailyGoalMinutes': dailyGoalMinutes,
       'preferredTheme': preferredTheme,
       'accentPalette': accentPalette,
       'languageCode': languageCode,
       'bookmarkedCourseIds': bookmarkedCourseIds,
       'createdAt': Timestamp.fromDate(createdAt),
+      'isDisabled': isDisabled,
     };
   }
 
   UserModel copyWith({
-    String? displayName,
+    String? name,
     String? photoUrl,
     String? role,
-    int? totalXp,
-    int? streakDays,
-    DateTime? lastActiveDate,
+    int? xp,
+    int? level,
+    int? streak,
+    DateTime? lastStudyDate,
+    int? totalStudySeconds,
     int? dailyGoalMinutes,
     String? preferredTheme,
     String? accentPalette,
     String? languageCode,
     List<String>? bookmarkedCourseIds,
+    bool? isDisabled,
   }) {
     return UserModel(
       uid: uid,
+      name: name ?? this.name,
       email: email,
-      displayName: displayName ?? this.displayName,
       photoUrl: photoUrl ?? this.photoUrl,
       role: role ?? this.role,
-      totalXp: totalXp ?? this.totalXp,
-      streakDays: streakDays ?? this.streakDays,
-      lastActiveDate: lastActiveDate ?? this.lastActiveDate,
+      xp: xp ?? this.xp,
+      level: level ?? this.level,
+      streak: streak ?? this.streak,
+      lastStudyDate: lastStudyDate ?? this.lastStudyDate,
+      totalStudySeconds: totalStudySeconds ?? this.totalStudySeconds,
       dailyGoalMinutes: dailyGoalMinutes ?? this.dailyGoalMinutes,
       preferredTheme: preferredTheme ?? this.preferredTheme,
       accentPalette: accentPalette ?? this.accentPalette,
       languageCode: languageCode ?? this.languageCode,
       bookmarkedCourseIds: bookmarkedCourseIds ?? this.bookmarkedCourseIds,
       createdAt: createdAt,
+      isDisabled: isDisabled ?? this.isDisabled,
     );
   }
 }

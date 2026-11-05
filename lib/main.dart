@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
 import 'data/repositories/auth_repository.dart';
 import 'data/repositories/course_repository.dart';
-import 'data/services/firestore_seeder.dart';
 import 'viewmodels/theme_viewmodel.dart';
 import 'viewmodels/auth_viewmodel.dart';
 import 'viewmodels/home_viewmodel.dart';
@@ -40,16 +40,13 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // Enable Firestore offline persistence
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+  );
+
   // Initialize Local Cache
   final sharedPreferences = await SharedPreferences.getInstance();
-
-  // Seed sample courses in Firestore if empty
-  try {
-    final seeder = FirestoreSeeder();
-    await seeder.seedInitialCoursesIfEmpty();
-  } catch (_) {
-    // Non-blocking if offline or initial setup
-  }
 
   // Instantiate Repositories
   final authRepository = FirebaseAuthRepository();

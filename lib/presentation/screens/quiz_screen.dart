@@ -1,11 +1,14 @@
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/dialog_utils.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/course_repository.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/quiz_viewmodel.dart';
+import '../widgets/common/app_app_bar.dart';
 
 class QuizScreen extends StatelessWidget {
   final String courseId;
@@ -48,6 +51,20 @@ class _QuizContentState extends State<_QuizContent> {
     super.dispose();
   }
 
+  Future<bool> _onWillPop() async {
+    final viewModel = context.read<QuizViewModel>();
+    if (viewModel.isFinished) return true;
+
+    final confirm = await DialogUtils.showConfirm(
+      context,
+      title: 'Leave Quiz?',
+      message: 'Are you sure you want to leave? Your progress in this attempt will be lost.',
+      confirmText: 'Leave',
+      isDanger: true,
+    );
+    return confirm ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -61,44 +78,85 @@ class _QuizContentState extends State<_QuizContent> {
 
     if (viewModel.isLoading || viewModel.quiz == null) {
       return const Scaffold(
+        appBar: AppAppBar(title: 'Loading Quiz'),
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
     final quiz = viewModel.quiz!;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(quiz.title),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Center(
-              child: Text(
-                '${viewModel.remainingSeconds ~/ 60}:${(viewModel.remainingSeconds % 60).toString().padLeft(2, '0')}',
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+    if (quiz.questions.isEmpty) {
+      return Scaffold(
+        appBar: AppAppBar(title: quiz.title),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppTheme.spaceLg),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.quiz_outlined, size: 64, color: Colors.grey),
+                const SizedBox(height: 16),
+                Text('No questions available for this quiz yet.', style: theme.textTheme.titleMedium, textAlign: TextAlign.center),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => context.pop(),
+                  child: const Text('Go Back'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldPop = await _onWillPop();
+        if (shouldPop && context.mounted) {
+          context.pop();
+        }
+      },
+      child: Scaffold(
+        appBar: AppAppBar(
+          title: quiz.title,
+          onBackPressed: () async {
+            final shouldPop = await _onWillPop();
+            if (shouldPop && context.mounted) {
+              context.pop();
+            }
+          },
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Center(
+                child: Text(
+                  '${viewModel.remainingSeconds ~/ 60}:${(viewModel.remainingSeconds % 60).toString().padLeft(2, '0')}',
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(AppTheme.spaceLg),
-            child: viewModel.isFinished
-                ? _buildResultView(theme, viewModel)
-                : _buildQuestionView(theme, viewModel, user?.uid),
-          ),
-          Align(
-            alignment: Alignment.topCenter,
-            child: ConfettiWidget(
-              confettiController: _confettiController,
-              blastDirectionality: BlastDirectionality.explosive,
-              shouldLoop: false,
+          ],
+        ),
+        body: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppTheme.spaceLg),
+              child: viewModel.isFinished
+                  ? _buildResultView(theme, viewModel)
+                  : _buildQuestionView(theme, viewModel, user?.uid),
             ),
-          ),
-        ],
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConfettiWidget(
+                confettiController: _confettiController,
+                blastDirectionality: BlastDirectionality.explosive,
+                shouldLoop: false,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -109,18 +167,23 @@ class _QuizContentState extends State<_QuizContent> {
     String? userId,
   ) {
     final quiz = viewModel.quiz!;
-    final question = quiz.questions[viewModel.currentQuestionIndex];
-    final selectedOption = viewModel.selectedAnswers[viewModel.currentQuestionIndex];
+    if (quiz.questions.isEmpty) {
+      return const Center(child: Text('No questions available.'));
+    }
+
+    final index = viewModel.currentQuestionIndex.clamp(0, quiz.questions.length - 1);
+    final question = quiz.questions[index];
+    final selectedOption = viewModel.selectedAnswers[index];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         LinearProgressIndicator(
-          value: (viewModel.currentQuestionIndex + 1) / quiz.questions.length,
+          value: (index + 1) / quiz.questions.length,
         ),
         const SizedBox(height: AppTheme.spaceMd),
         Text(
-          'Question ${viewModel.currentQuestionIndex + 1} of ${quiz.questions.length}',
+          'Question ${index + 1} of ${quiz.questions.length}',
           style: theme.textTheme.titleSmall,
         ),
         const SizedBox(height: AppTheme.spaceSm),
@@ -131,7 +194,7 @@ class _QuizContentState extends State<_QuizContent> {
           return Padding(
             padding: const EdgeInsets.only(bottom: AppTheme.spaceSm),
             child: InkWell(
-              onTap: () => viewModel.selectAnswer(viewModel.currentQuestionIndex, idx),
+              onTap: () => viewModel.selectAnswer(index, idx),
               borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
               child: Container(
                 padding: const EdgeInsets.all(AppTheme.spaceMd),
@@ -169,14 +232,14 @@ class _QuizContentState extends State<_QuizContent> {
           onPressed: selectedOption == null
               ? null
               : () {
-                  if (viewModel.currentQuestionIndex < quiz.questions.length - 1) {
+                  if (index < quiz.questions.length - 1) {
                     viewModel.nextQuestion();
                   } else {
                     viewModel.finishQuiz(userId);
                   }
                 },
           child: Text(
-            viewModel.currentQuestionIndex == quiz.questions.length - 1
+            index == quiz.questions.length - 1
                 ? 'Finish Quiz'
                 : 'Next Question',
           ),
@@ -206,7 +269,7 @@ class _QuizContentState extends State<_QuizContent> {
           ),
           const SizedBox(height: AppTheme.space2xl),
           ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => context.pop(),
             child: const Text('Back to Course'),
           ),
         ],

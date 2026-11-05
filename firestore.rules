@@ -2,65 +2,81 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
     function isAuthenticated() {
       return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserData().role == 'admin';
     }
 
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data;
+    // Categories
+    match /categories/{categoryId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
 
-    function isAdmin() {
-      return isAuthenticated() &&
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        getUserData(request.auth.uid).role == 'admin';
+    // Courses & subcollections
+    match /courses/{courseId} {
+      allow read: if isAuthenticated() && (resource.data.isPublished == true || isAdmin());
+      allow write: if isAdmin();
+
+      match /lessons/{lessonId} {
+        allow read: if isAuthenticated();
+        allow write: if isAdmin();
+      }
+
+      match /quizzes/{quizId} {
+        allow read: if isAuthenticated();
+        allow write: if isAdmin();
+
+        match /questions/{questionId} {
+          allow read: if isAuthenticated();
+          allow write: if isAdmin();
+        }
+      }
     }
 
-    // User profiles rule
+    // User profiles & subcollections
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
+      allow read: if isAuthenticated();
       allow create: if isOwner(userId) && request.resource.data.role == 'student';
       allow update: if (isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin();
       allow delete: if isAdmin();
-    }
 
-    // Courses rule
-    match /courses/{courseId} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if isAdmin();
-    }
+      match /enrollments/{courseId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
 
-    // Lessons subcollection
-    match /courses/{courseId}/lessons/{lessonId} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if isAdmin();
-    }
+      match /quizAttempts/{attemptId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
 
-    // Quizzes subcollection
-    match /courses/{courseId}/quizzes/{quizId} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if isAdmin();
-    }
+      match /studyLogs/{logId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
 
-    // Enrollments collection
-    match /enrollments/{enrollmentId} {
-      allow read: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow delete: if isAdmin();
-    }
+      match /reminders/{reminderId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
 
-    // Quiz attempts collection
-    match /quiz_attempts/{attemptId} {
-      allow read: if isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow delete: if isAdmin();
+      match /achievements/{achievementId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+
+      match /bookmarks/{courseId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
     }
   }
 }

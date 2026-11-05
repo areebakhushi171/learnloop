@@ -40,7 +40,7 @@ class GlassContainer extends StatelessWidget {
         color: surfaceColor.withValues(alpha: isDark ? 0.85 : 0.95),
         borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(color: borderColor, width: 1),
-        boxShadow: AppTheme.softShadow(Colors.black, opacity: isDark ? 0.2 : 0.04),
+        boxShadow: AppTheme.softShadow(Colors.black, isDark ? 0.2 : 0.04),
       ),
       child: child,
     );
