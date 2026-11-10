@@ -172,6 +172,14 @@ GoRouter createRouter(AuthViewModel authViewModel) {
         },
       ),
       GoRoute(
+        path: '/quiz/:courseId/:quizId',
+        builder: (context, state) {
+          final courseId = state.pathParameters['courseId'] ?? '';
+          final quizId = state.pathParameters['quizId'] ?? '';
+          return QuizScreen(courseId: courseId, quizId: quizId);
+        },
+      ),
+      GoRoute(
         path: RouteNames.quiz,
         builder: (context, state) {
           final courseId = state.pathParameters['courseId'] ?? '';

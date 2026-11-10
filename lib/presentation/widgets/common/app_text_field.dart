@@ -12,6 +12,9 @@ class AppTextField extends StatelessWidget {
   final int? maxLines;
   final String? Function(String?)? validator;
   final ValueChanged<String>? onChanged;
+  final FocusNode? focusNode;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onFieldSubmitted;
 
   const AppTextField({
     super.key,
@@ -25,6 +28,9 @@ class AppTextField extends StatelessWidget {
     this.maxLines = 1,
     this.validator,
     this.onChanged,
+    this.focusNode,
+    this.textInputAction,
+    this.onFieldSubmitted,
   });
 
   @override
@@ -35,13 +41,15 @@ class AppTextField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          label,
-          style: theme.textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w600,
+        if (label.isNotEmpty) ...[
+          Text(
+            label,
+            style: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: AppSpacing.xs),
+        ],
         TextFormField(
           controller: controller,
           obscureText: obscureText,
@@ -49,6 +57,9 @@ class AppTextField extends StatelessWidget {
           maxLines: maxLines,
           validator: validator,
           onChanged: onChanged,
+          focusNode: focusNode,
+          textInputAction: textInputAction,
+          onFieldSubmitted: onFieldSubmitted,
           style: theme.textTheme.bodyMedium,
           decoration: InputDecoration(
             hintText: hint ?? label,

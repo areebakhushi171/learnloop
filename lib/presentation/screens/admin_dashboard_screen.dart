@@ -1,4 +1,3 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -20,7 +19,6 @@ import '../../presentation/widgets/custom_widgets.dart';
 import '../../presentation/widgets/states/empty_state.dart';
 import '../../viewmodels/admin_viewmodel.dart';
 import '../../viewmodels/auth_viewmodel.dart';
-import '../../viewmodels/home_viewmodel.dart';
 import '../../viewmodels/profile_viewmodel.dart';
 import '../../viewmodels/theme_viewmodel.dart';
 
@@ -825,20 +823,57 @@ class _AdminStudentManagementTabState extends State<_AdminStudentManagementTab> 
                   final enrollments = enrollSnap.data ?? [];
                   final enrollment = enrollments.where((e) => e.courseId == course.id).firstOrNull;
                   final isEnrolled = enrollment != null;
+                  final isCompleted = isEnrolled && enrollment.progressPercent >= 1.0;
 
                   return ListTile(
                     title: Text(course.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text(
-                      isEnrolled
-                          ? 'Progress: ${(enrollment.progressPercent * 100).toInt()}% • ${enrollment.completedLessonIds.length}/${course.totalLessons} lessons'
-                          : 'Not enrolled',
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isEnrolled
+                              ? 'Progress: ${(enrollment.progressPercent * 100).toInt()}% • ${enrollment.completedLessonIds.length}/${course.totalLessons} lessons'
+                              : 'Not enrolled',
+                        ),
+                        if (isCompleted) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            enrollment.adminApproved ? '✨ Certificate Approved' : '⏳ Pending Certificate Approval',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: enrollment.adminApproved ? AppColors.success : AppColors.warning,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     trailing: isEnrolled
-                        ? OutlinedButton(
-                            onPressed: () async {
-                              await adminVM.removeCourseAssignment(student.uid, course.id);
-                            },
-                            child: const Text('Revoke'),
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (isCompleted) ...[
+                                TextButton(
+                                  onPressed: () async {
+                                    await adminVM.approveCourseCompletion(student.uid, course.id, !enrollment.adminApproved);
+                                  },
+                                  child: Text(
+                                    enrollment.adminApproved ? 'Unapprove' : 'Approve',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: enrollment.adminApproved ? AppColors.error : AppColors.success,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                              ],
+                              OutlinedButton(
+                                onPressed: () async {
+                                  await adminVM.removeCourseAssignment(student.uid, course.id);
+                                },
+                                child: const Text('Revoke'),
+                              ),
+                            ],
                           )
                         : ElevatedButton(
                             onPressed: () async {
@@ -983,138 +1018,162 @@ class _AdminAnalyticsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final homeViewModel = context.watch<HomeViewModel>();
+    final adminVM = context.watch<AdminViewModel>();
 
     return StreamBuilder<List<CourseModel>>(
-      stream: homeViewModel.coursesStream,
-      builder: (context, snapshot) {
-        final courses = snapshot.data ?? [];
+      stream: adminVM.coursesStream,
+      builder: (context, courseSnap) {
+        final courses = courseSnap.data ?? [];
         final totalLessons = courses.fold<int>(0, (sum, c) => sum + c.totalLessons);
 
-        return Scaffold(
-          appBar: const AppAppBar(title: 'Reports & Analytics', showBack: false),
-          body: SingleChildScrollView(
-            padding: AppSpacing.screenPadding,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: AppSpacing.cardPadding,
-                  decoration: BoxDecoration(
-                    color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                    borderRadius: AppRadius.radiusLg,
-                    border: Border.all(
-                      color: isDark ? AppColors.outlineDark : AppColors.outlineLight,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Course Catalog Coverage', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                          Text('${courses.length} Active Courses', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      ProgressBar(
-                        percent: courses.isEmpty ? 0.0 : (courses.length / 10).clamp(0.0, 1.0),
-                        height: 8,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xl),
+        return StreamBuilder<List<UserModel>>(
+          stream: adminVM.studentsStream,
+          builder: (context, studentSnap) {
+            final students = studentSnap.data ?? [];
 
-                Row(
-                  children: [
-                    Expanded(
-                      child: StatCard(
-                        title: 'Total Lessons',
-                        value: '$totalLessons',
-                        icon: Icons.menu_book_rounded,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: StatCard(
-                        title: 'Categories',
-                        value: '${courses.map((c) => c.category).toSet().length}',
-                        icon: Icons.category_rounded,
-                        color: AppColors.xpGold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.xl),
+            return StreamBuilder<List<EnrollmentModel>>(
+              stream: adminVM.globalEnrollmentsStream,
+              builder: (context, enrollSnap) {
+                final enrollments = enrollSnap.data ?? [];
+                final completedEnrollments = enrollments.where((e) => e.isCompleted || e.progressPercent >= 1.0).length;
+                final activeEnrollments = enrollments.where((e) => !e.isCompleted && e.progressPercent < 1.0).length;
+                final avgProgress = enrollments.isEmpty
+                    ? 0.0
+                    : (enrollments.fold<double>(0.0, (sum, e) => sum + e.progressPercent) / enrollments.length) * 100;
 
-                const SectionHeader(title: 'Weekly Platform Activity Trends'),
-                const SizedBox(height: AppSpacing.md),
-                Container(
-                  height: 200,
-                  padding: AppSpacing.cardPadding,
-                  decoration: BoxDecoration(
-                    color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                    borderRadius: AppRadius.radiusLg,
-                    border: Border.all(
-                      color: isDark ? AppColors.outlineDark : AppColors.outlineLight,
-                    ),
-                  ),
-                  child: BarChart(
-                    BarChartData(
-                      alignment: BarChartAlignment.spaceAround,
-                      maxY: 100,
-                      barTouchData: BarTouchData(enabled: true),
-                      titlesData: FlTitlesData(
-                        show: true,
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            getTitlesWidget: (val, meta) {
-                              const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                              return Text(days[val.toInt() % 7], style: const TextStyle(fontSize: 11));
-                            },
+                return Scaffold(
+                  appBar: const AppAppBar(title: 'Reports & Real Analytics', showBack: false),
+                  body: SingleChildScrollView(
+                    padding: AppSpacing.screenPadding,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Student Metrics Summary Card
+                        Container(
+                          padding: AppSpacing.cardPadding,
+                          decoration: BoxDecoration(
+                            color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                            borderRadius: AppRadius.radiusLg,
+                            border: Border.all(
+                              color: isDark ? AppColors.outlineDark : AppColors.outlineLight,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'Student Engagement & Progress',
+                                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  Text('${students.length} Total Students', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.xpGold)),
+                                ],
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('Overall Average Progress', style: theme.textTheme.bodyMedium),
+                                  Text('${avgProgress.toStringAsFixed(1)}%', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: AppColors.success)),
+                                ],
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              ProgressBar(
+                                percent: (avgProgress / 100).clamp(0.0, 1.0),
+                                height: 8,
+                              ),
+                            ],
                           ),
                         ),
-                        leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      ),
-                      borderData: FlBorderData(show: false),
-                      gridData: const FlGridData(show: false),
-                      barGroups: [
-                        _makeGroupData(0, 45, theme.colorScheme.primary),
-                        _makeGroupData(1, 60, theme.colorScheme.primary),
-                        _makeGroupData(2, 80, theme.colorScheme.primary),
-                        _makeGroupData(3, 75, theme.colorScheme.primary),
-                        _makeGroupData(4, 90, theme.colorScheme.primary),
-                        _makeGroupData(5, 50, theme.colorScheme.primary),
-                        _makeGroupData(6, 65, theme.colorScheme.primary),
+                        const SizedBox(height: AppSpacing.xl),
+
+                        // Real Stats Cards Grid
+                        Row(
+                          children: [
+                            Expanded(
+                              child: StatCard(
+                                title: 'Registered Students',
+                                value: '${students.length}',
+                                icon: Icons.people_rounded,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: StatCard(
+                                title: 'Active Enrollments',
+                                value: '$activeEnrollments',
+                                icon: Icons.school_rounded,
+                                color: AppColors.secondaryLight,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: StatCard(
+                                title: 'Completed Courses',
+                                value: '$completedEnrollments',
+                                icon: Icons.workspace_premium_rounded,
+                                color: AppColors.success,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: StatCard(
+                                title: 'Total Lessons',
+                                value: '$totalLessons',
+                                icon: Icons.menu_book_rounded,
+                                color: AppColors.xpGold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.xl),
+
+                        const SectionHeader(title: 'Course Catalog Overview'),
+                        const SizedBox(height: AppSpacing.md),
+                        Container(
+                          padding: AppSpacing.cardPadding,
+                          decoration: BoxDecoration(
+                            color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                            borderRadius: AppRadius.radiusLg,
+                            border: Border.all(
+                              color: isDark ? AppColors.outlineDark : AppColors.outlineLight,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('Active Courses', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                                  Text('${courses.length} Courses', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              Text('Categories: ${courses.map((c) => c.category).toSet().join(', ')}', style: theme.textTheme.bodySmall),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
+                );
+              },
+            );
+          },
         );
       },
-    );
-  }
-
-  BarChartGroupData _makeGroupData(int x, double y, Color color) {
-    return BarChartGroupData(
-      x: x,
-      barRods: [
-        BarChartRodData(
-          toY: y,
-          color: color,
-          width: 18,
-          borderRadius: BorderRadius.circular(6),
-        ),
-      ],
     );
   }
 }

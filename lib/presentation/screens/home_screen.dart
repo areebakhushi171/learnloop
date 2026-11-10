@@ -8,8 +8,8 @@ import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/course_model.dart';
-import '../../data/models/enrollment_model.dart';
 import '../../data/repositories/course_repository.dart';
+import '../../presentation/screens/certificate_screen.dart';
 import '../../presentation/widgets/common/app_button.dart';
 import '../../presentation/widgets/common/app_text_field.dart';
 import '../../presentation/widgets/common/section_header.dart';
@@ -120,8 +120,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       final enrollments = snapshot.data ?? [];
                       if (enrollments.isEmpty) return const SizedBox.shrink();
 
-                      enrollments.sort((a, b) => b.lastAccessedAt.compareTo(a.lastAccessedAt));
-                      final activeEnrollment = enrollments.first;
+                      // Prioritize in-progress enrollments, then fallback to most recently accessed
+                      final inProgress = enrollments.where((e) => e.progressPercent < 1.0 && !e.isCompleted).toList();
+                      inProgress.sort((a, b) => b.lastAccessedAt.compareTo(a.lastAccessedAt));
+
+                      final activeEnrollment = inProgress.isNotEmpty ? inProgress.first : (() {
+                        final copy = List<EnrollmentModel>.from(enrollments);
+                        copy.sort((a, b) => b.lastAccessedAt.compareTo(a.lastAccessedAt));
+                        return copy.first;
+                      })();
 
                       return FutureBuilder<CourseModel?>(
                         future: courseRepo.getCourseById(activeEnrollment.courseId),
@@ -130,6 +137,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           if (course == null) return const SizedBox.shrink();
 
                           final pct = (activeEnrollment.progressPercent * 100).toInt();
+                          final isCompleted = activeEnrollment.progressPercent >= 1.0 || activeEnrollment.isCompleted;
+                          final isApproved = activeEnrollment.adminApproved;
 
                           return Padding(
                             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -150,16 +159,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       AppBadge(
-                                        label: 'CONTINUE LEARNING',
-                                        backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.12),
-                                        textColor: theme.colorScheme.primary,
-                                        icon: Icons.play_arrow_rounded,
+                                        label: isCompleted
+                                            ? (isApproved ? 'CERTIFICATE READY ✨' : 'COURSE COMPLETED 🎉')
+                                            : 'CONTINUE LEARNING',
+                                        backgroundColor: isCompleted
+                                            ? AppColors.success.withValues(alpha: 0.12)
+                                            : theme.colorScheme.primary.withValues(alpha: 0.12),
+                                        textColor: isCompleted ? AppColors.success : theme.colorScheme.primary,
+                                        icon: isCompleted
+                                            ? (isApproved ? Icons.workspace_premium_rounded : Icons.check_circle_rounded)
+                                            : Icons.play_arrow_rounded,
                                       ),
                                       Text(
                                         '$pct% Complete',
                                         style: theme.textTheme.labelMedium?.copyWith(
                                           fontWeight: FontWeight.bold,
-                                          color: theme.colorScheme.primary,
+                                          color: isCompleted ? AppColors.success : theme.colorScheme.primary,
                                         ),
                                       ),
                                     ],
@@ -180,12 +195,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                   Align(
                                     alignment: Alignment.centerRight,
                                     child: SizedBox(
-                                      width: 140,
                                       height: 38,
                                       child: AppButton(
-                                        text: 'Resume',
-                                        icon: Icons.play_arrow_rounded,
-                                        onPressed: () => context.push('/course/${course.id}'),
+                                        text: isCompleted
+                                            ? (isApproved ? 'View Certificate' : 'Review Course')
+                                            : 'Resume',
+                                        icon: isCompleted
+                                            ? (isApproved ? Icons.workspace_premium_rounded : Icons.menu_book_rounded)
+                                            : Icons.play_arrow_rounded,
+                                        onPressed: () {
+                                          if (isCompleted && isApproved) {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) => CertificateScreen(
+                                                  courseTitle: course.title,
+                                                  studentName: user.displayName.isEmpty ? 'Student' : user.displayName,
+                                                ),
+                                              ),
+                                            );
+                                          } else {
+                                            context.push('/course/${course.id}');
+                                          }
+                                        },
                                       ),
                                     ),
                                   ),
@@ -566,12 +598,18 @@ class _EnrolledCourseCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Completed ${enrollment.completedLessonIds.length} of ${course.totalLessons} lessons',
-                    style: theme.textTheme.bodySmall,
+                    enrollment.progressPercent >= 1.0
+                        ? (enrollment.adminApproved ? '✨ Certificate Unlocked' : '🎉 Course Completed')
+                        : 'Completed ${enrollment.completedLessonIds.length} of ${course.totalLessons} lessons',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: enrollment.progressPercent >= 1.0 ? FontWeight.bold : FontWeight.normal,
+                      color: enrollment.progressPercent >= 1.0 ? AppColors.success : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                    ),
                   ),
                   Text(
                     '${(enrollment.progressPercent * 100).toInt()}%',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                    style: TextStyle(fontWeight: FontWeight.bold, color: enrollment.progressPercent >= 1.0 ? AppColors.success : theme.colorScheme.primary),
                   ),
                 ],
               ),

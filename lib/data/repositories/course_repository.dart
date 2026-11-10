@@ -18,7 +18,7 @@ abstract class CourseRepository {
   Future<void> deleteCategory(String categoryId);
 
   // Courses
-  Stream<List<CourseModel>> streamCourses({String? categoryId, String? searchQuery, String? level, String? category});
+  Stream<List<CourseModel>> streamCourses({String? categoryId, String? searchQuery, String? level, String? category, bool includeUnpublished = false});
   Future<CourseModel?> getCourseById(String courseId);
   Future<void> createOrUpdateCourse(CourseModel course, [File? thumbnailFile]);
   Future<void> deleteCourse(String courseId);
@@ -45,6 +45,7 @@ abstract class CourseRepository {
   Stream<EnrollmentModel?> streamEnrollment(String userId, String courseId);
   Stream<List<EnrollmentModel>> streamUserEnrollments(String userId);
   Future<void> enrollInCourse(String userId, String courseId);
+  Future<void> approveCourseCompletion(String userId, String courseId, bool approved);
   Future<void> markLessonComplete(String userId, String courseId, String lessonId, int totalLessons, [int lessonDurationMinutes = 10]);
   Future<void> recalculateAndSaveProgress(String userId, String courseId);
 
@@ -120,9 +121,14 @@ class FirestoreCourseRepository implements CourseRepository {
     String? searchQuery,
     String? level,
     String? category,
+    bool includeUnpublished = false,
   }) {
     return _firestore.collection('courses').snapshots().map((snapshot) {
       var list = snapshot.docs.map((doc) => CourseModel.fromFirestore(doc)).toList();
+
+      if (!includeUnpublished) {
+        list = list.where((c) => c.isPublished).toList();
+      }
 
       final activeCat = categoryId ?? category;
       if (activeCat != null && activeCat.isNotEmpty && activeCat != 'All') {
@@ -848,6 +854,16 @@ class FirestoreCourseRepository implements CourseRepository {
   @override
   Future<void> removeCourseFromStudent(String userId, String courseId) async {
     await _firestore.collection('users').doc(userId).collection('enrollments').doc(courseId).delete();
+  }
+
+  @override
+  Future<void> approveCourseCompletion(String userId, String courseId, bool approved) async {
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('enrollments')
+        .doc(courseId)
+        .update({'adminApproved': approved});
   }
 
   @override

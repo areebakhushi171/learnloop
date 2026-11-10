@@ -24,7 +24,7 @@ class AdminViewModel extends ChangeNotifier {
 
   // --- Real-time Streams ---
 
-  Stream<List<CourseModel>> get coursesStream => _courseRepository.streamCourses();
+  Stream<List<CourseModel>> get coursesStream => _courseRepository.streamCourses(includeUnpublished: true);
   Stream<List<UserModel>> get studentsStream => _courseRepository.streamAllStudents();
   Stream<List<EnrollmentModel>> get globalEnrollmentsStream => _courseRepository.streamAllEnrollmentsGrouped();
   Stream<List<LessonModel>> get globalLessonsStream => _courseRepository.streamAllLessonsGrouped();
@@ -186,6 +186,19 @@ class AdminViewModel extends ChangeNotifier {
       return true;
     } catch (e) {
       _errorMessage = 'Failed to delete student: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> approveCourseCompletion(String userId, String courseId, bool approved) async {
+    try {
+      await _courseRepository.approveCourseCompletion(userId, courseId, approved);
+      _successMessage = approved ? 'Course completion approved! Certificate unlocked.' : 'Certificate approval revoked.';
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = 'Failed to update approval: $e';
       notifyListeners();
       return false;
     }

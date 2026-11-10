@@ -2,11 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_radius.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/route_names.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_theme.dart';
 import '../../data/models/course_model.dart';
 import '../../data/models/lesson_model.dart';
 import '../../data/models/quiz_model.dart';
@@ -190,47 +187,61 @@ class CourseDetailsScreen extends StatelessWidget {
                   );
                 },
               ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: AppSpacing.screenPadding,
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(height: AppSpacing.md),
-                      SectionHeader(title: 'Quizzes & Assessments'),
-                      SizedBox(height: AppSpacing.xs),
-                    ],
-                  ),
-                ),
-              ),
-              StreamBuilder<List<QuizModel>>(
-                stream: courseRepo.streamQuizzes(courseId),
-                builder: (context, quizSnap) {
-                  final quizzes = quizSnap.data ?? [];
-                  if (quizzes.isEmpty) {
-                    return const SliverToBoxAdapter(
-                      child: EmptyState(
-                        icon: Icons.quiz_outlined,
-                        message: 'No quizzes available for this course.',
-                      ),
-                    );
+              StreamBuilder<EnrollmentModel?>(
+                stream: userId != null && !isAdmin ? courseRepo.streamEnrollment(userId, courseId) : Stream.value(null),
+                builder: (context, enrollmentSnap) {
+                  final enrollment = enrollmentSnap.data;
+                  final isEnrolled = isAdmin || enrollment != null;
+
+                  if (!isEnrolled) {
+                    return const SliverToBoxAdapter(child: SizedBox.shrink());
                   }
 
-                  return SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final quiz = quizzes[index];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                          child: QuizCard(
-                            quiz: quiz,
-                            mode: isAdmin ? QuizCardMode.admin : QuizCardMode.student,
-                            courseId: courseId,
-                          ),
-                        );
-                      },
-                      childCount: quizzes.length,
-                    ),
+                  return StreamBuilder<List<QuizModel>>(
+                    stream: courseRepo.streamQuizzes(courseId),
+                    builder: (context, quizSnap) {
+                      final quizzes = quizSnap.data ?? [];
+                      if (quizzes.isEmpty) {
+                        return const SliverToBoxAdapter(child: SizedBox.shrink());
+                      }
+
+                      return StreamBuilder<List<QuizAttemptModel>>(
+                        stream: userId != null ? courseRepo.streamUserQuizAttempts(userId, courseId) : Stream.value([]),
+                        builder: (context, attemptSnap) {
+                          final attempts = attemptSnap.data ?? [];
+
+                          return SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final quiz = quizzes[index];
+                                final quizAttempts = attempts.where((a) => a.quizId == quiz.id).toList();
+
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      if (index == 0) ...[
+                                        const SizedBox(height: AppSpacing.md),
+                                        const SectionHeader(title: 'Quizzes & Assessments'),
+                                        const SizedBox(height: AppSpacing.xs),
+                                      ],
+                                      QuizCard(
+                                        quiz: quiz,
+                                        mode: isAdmin ? QuizCardMode.admin : QuizCardMode.student,
+                                        courseId: courseId,
+                                        quizAttempts: quizAttempts,
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                              childCount: quizzes.length,
+                            ),
+                          );
+                        },
+                      );
+                    },
                   );
                 },
               ),

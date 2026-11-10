@@ -4,8 +4,6 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_radius.dart';
 import '../../core/constants/app_spacing.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_theme.dart';
 import '../../presentation/widgets/common/app_app_bar.dart';
 import '../../presentation/widgets/common/section_header.dart';
 import '../../presentation/widgets/custom_widgets.dart';

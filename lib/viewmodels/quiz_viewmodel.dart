@@ -32,10 +32,13 @@ class QuizViewModel extends ChangeNotifier {
   bool _isPassed = false;
   Timer? _timer;
 
+  final String? quizId;
+
   QuizViewModel({
     required CourseRepository courseRepository,
     required AuthRepository authRepository,
     required this.courseId,
+    this.quizId,
   })  : _courseRepository = courseRepository,
         _authRepository = authRepository {
     loadQuiz();
@@ -64,7 +67,13 @@ class QuizViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final quiz = await _courseRepository.getQuizForCourse(courseId);
+      QuizModel? quiz;
+      if (quizId != null && quizId!.isNotEmpty) {
+        quiz = await _courseRepository.getQuizById(courseId, quizId!);
+      } else {
+        quiz = await _courseRepository.getQuizForCourse(courseId);
+      }
+
       if (quiz != null) {
         _quiz = quiz;
         _remainingSeconds = quiz.timeLimitMinutes * 60;
@@ -83,6 +92,26 @@ class QuizViewModel extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  void resetQuizState() {
+    _timer?.cancel();
+    _currentQuestionIndex = 0;
+    _selectedAnswers.clear();
+    _displayedSelectedAnswers.clear();
+    _isFinished = false;
+    _scorePercent = 0.0;
+    _correctCount = 0;
+    _isPassed = false;
+    if (_quiz != null) {
+      _remainingSeconds = _quiz!.timeLimitMinutes * 60;
+      _optionOrders.clear();
+      for (var q in _quiz!.questions) {
+        _optionOrders[q.id] = ShuffleService.shuffleOptionIndexes(q);
+      }
+      _startTimer();
+    }
+    notifyListeners();
   }
 
   void _startTimer() {

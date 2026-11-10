@@ -5,8 +5,6 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_radius.dart';
 import '../../core/constants/app_spacing.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_theme.dart';
 import '../../core/utils/dialog_utils.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/course_repository.dart';
@@ -19,8 +17,9 @@ import '../../viewmodels/quiz_viewmodel.dart';
 
 class QuizScreen extends StatelessWidget {
   final String courseId;
+  final String? quizId;
 
-  const QuizScreen({super.key, required this.courseId});
+  const QuizScreen({super.key, required this.courseId, this.quizId});
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +28,7 @@ class QuizScreen extends StatelessWidget {
         courseRepository: context.read<CourseRepository>(),
         authRepository: context.read<AuthRepository>(),
         courseId: courseId,
+        quizId: quizId,
       ),
       child: const _QuizContent(),
     );
@@ -380,11 +380,26 @@ class _QuizContentState extends State<_QuizContent> {
             }),
 
             const SizedBox(height: AppSpacing.xl),
-            AppButton(
-              text: 'Back to Course',
-              icon: Icons.arrow_back_rounded,
-              onPressed: () => context.pop(),
-            ),
+            if (!viewModel.isPassed) ...[
+              AppButton(
+                text: 'Retake Quiz Now',
+                icon: Icons.refresh_rounded,
+                onPressed: () => viewModel.resetQuizState(),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              AppButton(
+                text: 'Back to Course',
+                icon: Icons.arrow_back_rounded,
+                variant: AppButtonVariant.outline,
+                onPressed: () => context.pop(),
+              ),
+            ] else ...[
+              AppButton(
+                text: 'Back to Course',
+                icon: Icons.arrow_back_rounded,
+                onPressed: () => context.pop(),
+              ),
+            ],
           ],
         ),
       ),

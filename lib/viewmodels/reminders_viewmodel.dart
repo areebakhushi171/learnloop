@@ -1,76 +1,82 @@
 import 'package:flutter/material.dart';
-
-class ReminderItem {
-  final String id;
-  final String title;
-  final String time;
-  final bool enabled;
-
-  const ReminderItem({
-    required this.id,
-    required this.title,
-    required this.time,
-    required this.enabled,
-  });
-
-  ReminderItem copyWith({
-    String? id,
-    String? title,
-    String? time,
-    bool? enabled,
-  }) {
-    return ReminderItem(
-      id: id ?? this.id,
-      title: title ?? this.title,
-      time: time ?? this.time,
-      enabled: enabled ?? this.enabled,
-    );
-  }
-}
+import '../data/models/reminder_model.dart';
+import '../data/repositories/auth_repository.dart';
+import '../data/repositories/course_repository.dart';
 
 class RemindersViewModel extends ChangeNotifier {
-  List<ReminderItem> _reminders = [
-    const ReminderItem(
-      id: '1',
-      title: 'Morning Concept Drill',
-      time: '08:00 AM',
-      enabled: true,
-    ),
-    const ReminderItem(
-      id: '2',
-      title: 'Afternoon Coding Challenge',
-      time: '02:30 PM',
-      enabled: true,
-    ),
-    const ReminderItem(
-      id: '3',
-      title: 'Nightly Streak Shield Review',
-      time: '09:00 PM',
-      enabled: false,
-    ),
-  ];
+  final CourseRepository _courseRepository;
+  final AuthRepository _authRepository;
 
-  List<ReminderItem> get reminders => _reminders;
+  final bool _isLoading = false;
+  String? _errorMessage;
 
-  void toggleReminder(String id) {
-    _reminders = _reminders.map((r) {
-      if (r.id == id) {
-        return r.copyWith(enabled: !r.enabled);
-      }
-      return r;
-    }).toList();
-    notifyListeners();
+  RemindersViewModel(this._courseRepository, this._authRepository);
+
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
+
+  Stream<List<ReminderModel>> get remindersStream {
+    final userId = _authRepository.currentUser?.uid;
+    if (userId == null) return Stream.value([]);
+    return _courseRepository.streamReminders(userId);
   }
 
-  void addReminder(String title, TimeOfDay timeOfDay, BuildContext context) {
-    final formatted = timeOfDay.format(context);
-    final newItem = ReminderItem(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: title.isEmpty ? 'Custom Study Target' : title,
-      time: formatted,
-      enabled: true,
+  Future<void> addReminder(String title, TimeOfDay timeOfDay) async {
+    final userId = _authRepository.currentUser?.uid;
+    if (userId == null) return;
+
+    final hour = timeOfDay.hour.toString().padLeft(2, '0');
+    final minute = timeOfDay.minute.toString().padLeft(2, '0');
+    final timeStr = '$hour:$minute';
+
+    final reminder = ReminderModel(
+      id: '',
+      title: title.isEmpty ? 'Study Reminder' : title,
+      time: timeStr,
+      days: [1, 2, 3, 4, 5, 6, 7],
+      isEnabled: true,
     );
-    _reminders = [..._reminders, newItem];
-    notifyListeners();
+
+    try {
+      await _courseRepository.saveReminder(userId, reminder);
+      notifyListeners();
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+    }
+  }
+
+  Future<void> toggleReminder(ReminderModel reminder) async {
+    final userId = _authRepository.currentUser?.uid;
+    if (userId == null) return;
+
+    final updated = ReminderModel(
+      id: reminder.id,
+      title: reminder.title,
+      time: reminder.time,
+      days: reminder.days,
+      isEnabled: !reminder.isEnabled,
+    );
+
+    try {
+      await _courseRepository.saveReminder(userId, updated);
+      notifyListeners();
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteReminder(String reminderId) async {
+    final userId = _authRepository.currentUser?.uid;
+    if (userId == null) return;
+
+    try {
+      await _courseRepository.deleteReminder(userId, reminderId);
+      notifyListeners();
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+    }
   }
 }

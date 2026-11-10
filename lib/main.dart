@@ -63,7 +63,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ThemeViewModel(sharedPreferences)),
         ChangeNotifierProvider(create: (_) => AuthViewModel(authRepository)),
         ChangeNotifierProvider(create: (_) => HomeViewModel(courseRepository)),
-        ChangeNotifierProvider(create: (_) => RemindersViewModel()),
+        ChangeNotifierProvider(create: (_) => RemindersViewModel(courseRepository, authRepository)),
         ChangeNotifierProvider(create: (_) => ProgressViewModel()),
         ChangeNotifierProvider(create: (_) => SplashOnboardingViewModel(sharedPreferences)),
         ChangeNotifierProvider(create: (_) => ProfileViewModel(authRepository)),

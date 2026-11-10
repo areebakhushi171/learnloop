@@ -33,6 +33,41 @@ class _AdminQuizFormScreenState extends State<AdminQuizFormScreen> {
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.quizId != null && widget.quizId!.isNotEmpty) {
+      _loadQuizData();
+    }
+  }
+
+  Future<void> _loadQuizData() async {
+    setState(() => _isLoading = true);
+    try {
+      final courseRepo = context.read<CourseRepository>();
+      final quiz = await courseRepo.getQuizById(widget.courseId, widget.quizId!);
+      if (quiz != null && mounted) {
+        _titleController.text = quiz.title;
+        _descController.text = quiz.description;
+        _instructionsController.text = quiz.instructions;
+        _passingMarksController.text = quiz.passingMarks.toString();
+        _timeLimitController.text = quiz.timeLimitMinutes.toString();
+        _maxAttemptsController.text = quiz.maxAttempts.toString();
+        setState(() {
+          _isPublished = quiz.isPublished;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackbarUtils.showError(context, 'Failed to load quiz: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _titleController.dispose();
     _descController.dispose();

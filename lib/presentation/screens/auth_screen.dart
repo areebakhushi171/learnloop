@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_radius.dart';
 import '../../core/constants/app_spacing.dart';
-import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_colors.dart' as theme_colors;
 import '../../core/utils/screen_utils.dart';
 import '../../core/utils/snackbar_utils.dart';
 import '../../presentation/widgets/common/app_button.dart';
@@ -181,6 +181,7 @@ class _AuthScreenState extends State<AuthScreen> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
+        backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
         body: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -201,9 +202,9 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
-                        blurRadius: 24,
-                        offset: const Offset(0, 8),
+                        color: theme.colorScheme.primary.withValues(alpha: isDark ? 0.2 : 0.08),
+                        blurRadius: 32,
+                        offset: const Offset(0, 12),
                       ),
                     ],
                   ),
@@ -211,34 +212,41 @@ class _AuthScreenState extends State<AuthScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Header Branding
+                      // Header Branding with Glow
                       Center(
-                        child: Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            gradient: AppGradients.primaryLinear(
-                              theme.colorScheme.primary,
-                              AppColors.accentLight,
+                          child: Container(
+                            padding: const EdgeInsets.all(22),
+                            decoration: BoxDecoration(
+                              gradient: theme_colors.AppGradients.primaryLinear(
+                                theme.colorScheme.primary,
+                                AppColors.accentLight,
+                              ),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: theme.colorScheme.primary.withValues(alpha: 0.4),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
                             ),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.school_rounded,
-                            size: 44,
-                            color: Colors.white,
+                            child: const Icon(
+                              Icons.school_rounded,
+                              size: 48,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
+                        const SizedBox(height: AppSpacing.lg),
 
-                      // Heading Title & Subtitle
-                      Text(
-                        _getHeaderTitle(),
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                        // Heading Title & Subtitle
+                        Text(
+                          _getHeaderTitle(),
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
                       const SizedBox(height: AppSpacing.xs),
                       Text(
                         _getHeaderSubtitle(),
@@ -334,18 +342,24 @@ class _AuthScreenState extends State<AuthScreen> {
       children: [
         AppTextField(
           controller: _loginEmailController,
+          focusNode: _loginEmailFocus,
           label: 'Email Address',
           hint: 'name@example.com',
           prefixIcon: Icons.mail_outline_rounded,
           keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.next,
+          onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_loginPasswordFocus),
           validator: _validateEmail,
         ),
         const SizedBox(height: AppSpacing.md),
         AppTextField(
           controller: _loginPasswordController,
+          focusNode: _loginPasswordFocus,
           label: 'Password',
           prefixIcon: Icons.lock_outline_rounded,
           obscureText: _obscureLoginPassword,
+          textInputAction: TextInputAction.done,
+          onFieldSubmitted: (_) => _handleLogin(),
           suffixIcon: IconButton(
             icon: Icon(_obscureLoginPassword ? Icons.visibility_off_rounded : Icons.visibility_rounded, size: 20),
             onPressed: () => setState(() => _obscureLoginPassword = !_obscureLoginPassword),
@@ -369,27 +383,36 @@ class _AuthScreenState extends State<AuthScreen> {
       children: [
         AppTextField(
           controller: _signupNameController,
+          focusNode: _signupNameFocus,
           label: 'Full Name',
           hint: 'John Doe',
           prefixIcon: Icons.person_outline_rounded,
           keyboardType: TextInputType.name,
+          textInputAction: TextInputAction.next,
+          onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_signupEmailFocus),
           validator: _validateName,
         ),
         const SizedBox(height: AppSpacing.md),
         AppTextField(
           controller: _signupEmailController,
+          focusNode: _signupEmailFocus,
           label: 'Email Address',
           hint: 'name@example.com',
           prefixIcon: Icons.mail_outline_rounded,
           keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.next,
+          onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_signupPasswordFocus),
           validator: _validateEmail,
         ),
         const SizedBox(height: AppSpacing.md),
         AppTextField(
           controller: _signupPasswordController,
+          focusNode: _signupPasswordFocus,
           label: 'Password',
           prefixIcon: Icons.lock_outline_rounded,
           obscureText: _obscureSignupPassword,
+          textInputAction: TextInputAction.next,
+          onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_signupConfirmPasswordFocus),
           suffixIcon: IconButton(
             icon: Icon(_obscureSignupPassword ? Icons.visibility_off_rounded : Icons.visibility_rounded, size: 20),
             onPressed: () => setState(() => _obscureSignupPassword = !_obscureSignupPassword),
@@ -399,9 +422,12 @@ class _AuthScreenState extends State<AuthScreen> {
         const SizedBox(height: AppSpacing.md),
         AppTextField(
           controller: _signupConfirmPasswordController,
+          focusNode: _signupConfirmPasswordFocus,
           label: 'Confirm Password',
           prefixIcon: Icons.lock_reset_rounded,
           obscureText: _obscureConfirmPassword,
+          textInputAction: TextInputAction.done,
+          onFieldSubmitted: (_) => _handleSignup(),
           suffixIcon: IconButton(
             icon: Icon(_obscureConfirmPassword ? Icons.visibility_off_rounded : Icons.visibility_rounded, size: 20),
             onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
@@ -417,10 +443,13 @@ class _AuthScreenState extends State<AuthScreen> {
       children: [
         AppTextField(
           controller: _forgotEmailController,
+          focusNode: _forgotEmailFocus,
           label: 'Email Address',
           hint: 'Enter your registered email',
           prefixIcon: Icons.mail_outline_rounded,
           keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.done,
+          onFieldSubmitted: (_) => _handleForgotPassword(),
           validator: _validateEmail,
         ),
       ],

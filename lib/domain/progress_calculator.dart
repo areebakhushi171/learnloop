@@ -32,8 +32,15 @@ class ProgressCalculator {
       quizPart = (totalQuizScoreSum / (totalPublishedQuizzesCount * 100.0)).clamp(0.0, 1.0);
     }
 
+    final bool lessonsDone = totalLessons == 0 || completedLessonsCount >= totalLessons;
+    final bool quizzesDone = totalPublishedQuizzesCount == 0 ||
+        (quizBestPercentages.length >= totalPublishedQuizzesCount &&
+         !quizBestPercentages.contains(0.0));
+
     double overallProgress = 0.0;
-    if (totalLessons > 0 && totalPublishedQuizzesCount > 0) {
+    if (lessonsDone && quizzesDone) {
+      overallProgress = 1.0;
+    } else if (totalLessons > 0 && totalPublishedQuizzesCount > 0) {
       overallProgress = (lessonWeight * lessonPart) + (quizWeight * quizPart);
     } else if (totalLessons > 0) {
       overallProgress = lessonPart;
@@ -41,9 +48,7 @@ class ProgressCalculator {
       overallProgress = quizPart;
     }
 
-    final bool lessonsDone = totalLessons == 0 || completedLessonsCount >= totalLessons;
-    final bool quizzesDone = totalPublishedQuizzesCount == 0 || quizBestPercentages.length >= totalPublishedQuizzesCount;
-    final bool completed = lessonsDone && quizzesDone && overallProgress >= 1.0;
+    final bool completed = lessonsDone && quizzesDone;
 
     return ProgressResult(
       progressPercent: overallProgress.clamp(0.0, 1.0),

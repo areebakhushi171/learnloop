@@ -9,6 +9,7 @@ class EnrollmentModel {
   final String lastLessonId;
   final DateTime lastAccessedAt;
   final bool isCompleted;
+  final bool adminApproved;
 
   const EnrollmentModel({
     required this.courseId,
@@ -19,6 +20,7 @@ class EnrollmentModel {
     required this.lastLessonId,
     required this.lastAccessedAt,
     required this.isCompleted,
+    this.adminApproved = false,
   });
 
   factory EnrollmentModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> snapshot) {
@@ -32,6 +34,7 @@ class EnrollmentModel {
       lastLessonId: data['lastLessonId'] ?? data['lastAccessedLessonId'] ?? '',
       lastAccessedAt: (data['lastAccessedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       isCompleted: data['isCompleted'] ?? false,
+      adminApproved: data['adminApproved'] ?? false,
     );
   }
 
@@ -44,6 +47,7 @@ class EnrollmentModel {
       'lastLessonId': lastLessonId,
       'lastAccessedAt': Timestamp.fromDate(lastAccessedAt),
       'isCompleted': isCompleted,
+      'adminApproved': adminApproved,
     };
   }
 }
