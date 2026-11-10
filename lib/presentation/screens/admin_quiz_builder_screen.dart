@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_theme.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_radius.dart';
+import '../../core/constants/app_spacing.dart';
+import '../../core/utils/snackbar_utils.dart';
 import '../../data/models/quiz_model.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/course_repository.dart';
@@ -9,6 +12,8 @@ import '../../viewmodels/admin_quiz_builder_viewmodel.dart';
 import '../widgets/common/app_app_bar.dart';
 import '../widgets/common/app_button.dart';
 import '../widgets/common/app_text_field.dart';
+import '../widgets/common/section_header.dart';
+import '../widgets/states/empty_state.dart';
 
 class AdminQuizBuilderScreen extends StatelessWidget {
   final String courseId;
@@ -85,6 +90,8 @@ class _QuizBuilderContentState extends State<_QuizBuilderContent> with SingleTic
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final viewModel = context.watch<AdminQuizBuilderViewModel>();
     final authRepo = context.watch<AuthRepository>();
     final userId = authRepo.currentUser?.uid ?? '';
@@ -111,7 +118,7 @@ class _QuizBuilderContentState extends State<_QuizBuilderContent> with SingleTic
                     children: [
                       // Step 1: Details
                       SingleChildScrollView(
-                        padding: const EdgeInsets.all(AppTheme.spaceLg),
+                        padding: AppSpacing.screenPadding,
                         child: Form(
                           key: _formKey,
                           child: Column(
@@ -121,46 +128,47 @@ class _QuizBuilderContentState extends State<_QuizBuilderContent> with SingleTic
                                 label: 'Quiz Title',
                                 validator: (v) => v!.isEmpty ? 'Required' : null,
                               ),
-                              const SizedBox(height: AppTheme.spaceMd),
+                              const SizedBox(height: AppSpacing.md),
                               AppTextField(controller: _descController, label: 'Description'),
-                              const SizedBox(height: AppTheme.spaceMd),
+                              const SizedBox(height: AppSpacing.md),
                               AppTextField(controller: _instructionsController, label: 'Instructions'),
-                              const SizedBox(height: AppTheme.spaceMd),
+                              const SizedBox(height: AppSpacing.md),
                               AppTextField(
                                 controller: _passingMarksController,
                                 label: 'Passing Marks',
                                 keyboardType: TextInputType.number,
                               ),
-                              const SizedBox(height: AppTheme.spaceMd),
+                              const SizedBox(height: AppSpacing.md),
                               AppTextField(
                                 controller: _timeLimitController,
                                 label: 'Time Limit (Minutes)',
                                 keyboardType: TextInputType.number,
                               ),
-                              const SizedBox(height: AppTheme.spaceMd),
+                              const SizedBox(height: AppSpacing.md),
                               AppTextField(
                                 controller: _maxAttemptsController,
                                 label: 'Max Attempts',
                                 keyboardType: TextInputType.number,
                               ),
-                              const SizedBox(height: AppTheme.spaceMd),
+                              const SizedBox(height: AppSpacing.md),
                               SwitchListTile(
-                                title: const Text('Publish Quiz'),
+                                title: const Text('Publish Quiz', style: TextStyle(fontWeight: FontWeight.bold)),
                                 value: _isPublished,
                                 onChanged: (val) {
                                   setState(() => _isPublished = val);
                                   _syncDetailsToViewModel();
                                 },
                               ),
-                              const SizedBox(height: AppTheme.spaceLg),
-                              ElevatedButton(
+                              const SizedBox(height: AppSpacing.lg),
+                              AppButton(
+                                text: 'Next: Add Questions',
+                                icon: Icons.arrow_forward_rounded,
                                 onPressed: () {
                                   if (_formKey.currentState?.validate() ?? false) {
                                     _syncDetailsToViewModel();
                                     _tabController.animateTo(1);
                                   }
                                 },
-                                child: const Text('Next: Add Questions'),
                               ),
                             ],
                           ),
@@ -171,8 +179,8 @@ class _QuizBuilderContentState extends State<_QuizBuilderContent> with SingleTic
                       Column(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(AppTheme.spaceMd),
-                            color: Theme.of(context).colorScheme.primaryContainer,
+                            padding: AppSpacing.cardPadding,
+                            color: theme.colorScheme.primary.withValues(alpha: 0.12),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -184,34 +192,35 @@ class _QuizBuilderContentState extends State<_QuizBuilderContent> with SingleTic
                           Expanded(
                             child: viewModel.questions.isEmpty
                                 ? Center(
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        const Icon(Icons.quiz_outlined, size: 64, color: Colors.grey),
-                                        const SizedBox(height: 12),
-                                        const Text('No questions added yet.'),
-                                        const SizedBox(height: 12),
-                                        ElevatedButton.icon(
-                                          onPressed: () => _openAddQuestionDialog(context),
-                                          icon: const Icon(Icons.add),
-                                          label: const Text('Add Question'),
-                                        ),
-                                      ],
+                                    child: EmptyState(
+                                      icon: Icons.quiz_outlined,
+                                      message: 'No questions added yet.',
+                                      buttonText: 'Add Question',
+                                      onButtonPressed: () => _openAddQuestionDialog(context),
                                     ),
                                   )
                                 : ListView.builder(
-                                    padding: const EdgeInsets.all(AppTheme.spaceLg),
+                                    padding: AppSpacing.screenPadding,
                                     itemCount: viewModel.questions.length,
                                     itemBuilder: (context, index) {
                                       final q = viewModel.questions[index];
-                                      return Card(
-                                        margin: const EdgeInsets.only(bottom: AppTheme.spaceMd),
+                                      return Container(
+                                        margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                                        padding: AppSpacing.cardPadding,
+                                        decoration: BoxDecoration(
+                                          color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                                          borderRadius: AppRadius.radiusLg,
+                                          border: Border.all(
+                                            color: isDark ? AppColors.outlineDark : AppColors.outlineLight,
+                                          ),
+                                        ),
                                         child: ListTile(
+                                          contentPadding: EdgeInsets.zero,
                                           leading: CircleAvatar(child: Text('${index + 1}')),
-                                          title: Text(q.text, maxLines: 2, overflow: TextOverflow.ellipsis),
-                                          subtitle: Text('${q.type.name.toUpperCase()} • ${q.marks} Marks'),
+                                          title: Text(q.text, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                          subtitle: Text('${q.type.name.toUpperCase()} • ${q.marks} Marks • Options: ${q.options.length}'),
                                           trailing: IconButton(
-                                            icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                                            icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
                                             onPressed: () => viewModel.removeQuestion(index),
                                           ),
                                         ),
@@ -220,13 +229,13 @@ class _QuizBuilderContentState extends State<_QuizBuilderContent> with SingleTic
                                   ),
                           ),
                           Padding(
-                            padding: const EdgeInsets.all(AppTheme.spaceLg),
+                            padding: AppSpacing.screenPadding,
                             child: Row(
                               children: [
                                 Expanded(
                                   child: OutlinedButton.icon(
                                     onPressed: () => _openAddQuestionDialog(context),
-                                    icon: const Icon(Icons.add),
+                                    icon: const Icon(Icons.add_rounded),
                                     label: const Text('Add Question'),
                                   ),
                                 ),
@@ -248,25 +257,34 @@ class _QuizBuilderContentState extends State<_QuizBuilderContent> with SingleTic
 
                       // Step 3: Review & Atomic Save
                       Padding(
-                        padding: const EdgeInsets.all(AppTheme.spaceLg),
+                        padding: AppSpacing.screenPadding,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Card(
-                              child: Padding(
-                                padding: const EdgeInsets.all(AppTheme.spaceLg),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Quiz Summary', style: Theme.of(context).textTheme.titleLarge),
-                                    const Divider(),
-                                    Text('Title: ${viewModel.title.isEmpty ? "(Not Set)" : viewModel.title}'),
-                                    Text('Questions Count: ${viewModel.questions.length}'),
-                                    Text('Total Marks: ${viewModel.totalMarks}'),
-                                    Text('Passing Marks: ${viewModel.passingMarks}'),
-                                    Text('Status: ${viewModel.isPublished ? "Published" : "Draft"}'),
-                                  ],
+                            Container(
+                              padding: AppSpacing.cardPadding,
+                              decoration: BoxDecoration(
+                                color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                                borderRadius: AppRadius.radiusLg,
+                                border: Border.all(
+                                  color: isDark ? AppColors.outlineDark : AppColors.outlineLight,
                                 ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SectionHeader(title: 'Quiz Summary'),
+                                  const Divider(),
+                                  Text('Title: ${viewModel.title.isEmpty ? "(Not Set)" : viewModel.title}'),
+                                  const SizedBox(height: 4),
+                                  Text('Questions Count: ${viewModel.questions.length}'),
+                                  const SizedBox(height: 4),
+                                  Text('Total Marks: ${viewModel.totalMarks}'),
+                                  const SizedBox(height: 4),
+                                  Text('Passing Marks: ${viewModel.passingMarks}'),
+                                  const SizedBox(height: 4),
+                                  Text('Status: ${viewModel.isPublished ? "Published" : "Draft"}'),
+                                ],
                               ),
                             ),
                             const Spacer(),
@@ -274,15 +292,18 @@ class _QuizBuilderContentState extends State<_QuizBuilderContent> with SingleTic
                               Container(
                                 padding: const EdgeInsets.all(12),
                                 margin: const EdgeInsets.only(bottom: 12),
-                                color: Colors.amber.shade100,
+                                decoration: BoxDecoration(
+                                  color: AppColors.warning.withValues(alpha: 0.15),
+                                  borderRadius: AppRadius.radiusLg,
+                                ),
                                 child: const Row(
                                   children: [
-                                    Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                                    Icon(Icons.warning_amber_rounded, color: AppColors.warning),
                                     SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
                                         'Add At Least One Question To Save This Quiz',
-                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                        style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.warning),
                                       ),
                                     ),
                                   ],
@@ -290,13 +311,12 @@ class _QuizBuilderContentState extends State<_QuizBuilderContent> with SingleTic
                               ),
                             AppButton(
                               text: 'Save Quiz',
+                              icon: Icons.check_circle_rounded,
                               onPressed: viewModel.canSave
                                   ? () async {
                                       final success = await viewModel.saveQuiz(createdByUserId: userId);
                                       if (success && context.mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Quiz saved successfully!'), backgroundColor: Colors.green),
-                                        );
+                                        SnackbarUtils.showSuccess(context, 'Quiz saved successfully!');
                                         context.pop();
                                       }
                                     }
@@ -315,53 +335,92 @@ class _QuizBuilderContentState extends State<_QuizBuilderContent> with SingleTic
   }
 
   void _openAddQuestionDialog(BuildContext context) {
+    final viewModel = context.read<AdminQuizBuilderViewModel>();
     final textController = TextEditingController();
     final marksController = TextEditingController(text: '1');
-    final option1Controller = TextEditingController();
-    final option2Controller = TextEditingController();
+    final optionAController = TextEditingController();
+    final optionBController = TextEditingController();
+    final optionCController = TextEditingController();
+    final optionDController = TextEditingController();
+    int correctOptionIndex = 0;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Add Question to Draft'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppTextField(controller: textController, label: 'Question Text'),
-              const SizedBox(height: 8),
-              AppTextField(controller: marksController, label: 'Marks', keyboardType: TextInputType.number),
-              const SizedBox(height: 8),
-              AppTextField(controller: option1Controller, label: 'Option A (Correct)'),
-              const SizedBox(height: 8),
-              AppTextField(controller: option2Controller, label: 'Option B'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) {
+          return AlertDialog(
+            title: const Text('Add 4-Option Question'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppTextField(controller: textController, label: 'Question Text'),
+                  const SizedBox(height: 8),
+                  AppTextField(controller: marksController, label: 'Marks', keyboardType: TextInputType.number),
+                  const SizedBox(height: 12),
+                  const Text('Options (All 4 Required)', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  AppTextField(controller: optionAController, label: 'Option A'),
+                  const SizedBox(height: 6),
+                  AppTextField(controller: optionBController, label: 'Option B'),
+                  const SizedBox(height: 6),
+                  AppTextField(controller: optionCController, label: 'Option C'),
+                  const SizedBox(height: 6),
+                  AppTextField(controller: optionDController, label: 'Option D'),
+                  const SizedBox(height: 12),
+                  const Text('Mark Correct Option', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  SegmentedButton<int>(
+                    segments: const [
+                      ButtonSegment(value: 0, label: Text('A')),
+                      ButtonSegment(value: 1, label: Text('B')),
+                      ButtonSegment(value: 2, label: Text('C')),
+                      ButtonSegment(value: 3, label: Text('D')),
+                    ],
+                    selected: {correctOptionIndex},
+                    onSelectionChanged: (newSelection) {
+                      setDialogState(() => correctOptionIndex = newSelection.first);
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              ElevatedButton(
+                onPressed: () {
+                  final text = textController.text.trim();
+                  final optA = optionAController.text.trim();
+                  final optB = optionBController.text.trim();
+                  final optC = optionCController.text.trim();
+                  final optD = optionDController.text.trim();
+
+                  if (text.isEmpty || optA.isEmpty || optB.isEmpty || optC.isEmpty || optD.isEmpty) {
+                    SnackbarUtils.showError(dialogCtx, 'Please fill all 4 options!');
+                    return;
+                  }
+
+                  final question = QuizQuestionModel(
+                    id: DateTime.now().millisecondsSinceEpoch.toString(),
+                    type: QuestionType.mcq,
+                    text: text,
+                    options: [optA, optB, optC, optD],
+                    correctIndexes: [correctOptionIndex],
+                    marks: int.tryParse(marksController.text.trim()) ?? 1,
+                    explanation: '',
+                    topic: 'General',
+                    order: viewModel.questions.length,
+                  );
+
+                  viewModel.addQuestion(question);
+                  Navigator.pop(ctx);
+                },
+                child: const Text('Add Question'),
+              ),
             ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              if (textController.text.trim().isEmpty || option1Controller.text.trim().isEmpty || option2Controller.text.trim().isEmpty) return;
-
-              final question = QuizQuestionModel(
-                id: '',
-                type: QuestionType.mcq,
-                text: textController.text.trim(),
-                options: [option1Controller.text.trim(), option2Controller.text.trim()],
-                correctIndexes: [0],
-                marks: int.tryParse(marksController.text.trim()) ?? 1,
-                explanation: '',
-                topic: 'General',
-                order: 0,
-              );
-
-              context.read<AdminQuizBuilderViewModel>().addQuestion(question);
-              Navigator.pop(ctx);
-            },
-            child: const Text('Add'),
-          ),
-        ],
+          );
+        },
       ),
     );
   }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_radius.dart';
+import '../../../core/constants/app_spacing.dart';
 
 class AppTextField extends StatelessWidget {
   final TextEditingController controller;
@@ -9,7 +9,9 @@ class AppTextField extends StatelessWidget {
   final Widget? suffixIcon;
   final bool obscureText;
   final TextInputType? keyboardType;
+  final int? maxLines;
   final String? Function(String?)? validator;
+  final ValueChanged<String>? onChanged;
 
   const AppTextField({
     super.key,
@@ -20,27 +22,42 @@ class AppTextField extends StatelessWidget {
     this.suffixIcon,
     this.obscureText = false,
     this.keyboardType,
+    this.maxLines = 1,
     this.validator,
+    this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      validator: validator,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixIcon: prefixIcon != null ? Icon(prefixIcon) : null,
-        suffixIcon: suffixIcon,
-        border: OutlineInputBorder(borderRadius: AppRadius.radiusMd),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: AppRadius.radiusMd,
-          borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
         ),
-      ),
+        const SizedBox(height: AppSpacing.xs),
+        TextFormField(
+          controller: controller,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          maxLines: maxLines,
+          validator: validator,
+          onChanged: onChanged,
+          style: theme.textTheme.bodyMedium,
+          decoration: InputDecoration(
+            hintText: hint ?? label,
+            prefixIcon: prefixIcon != null ? Icon(prefixIcon, size: 20) : null,
+            suffixIcon: suffixIcon,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+        ),
+      ],
     );
   }
 }

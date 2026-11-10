@@ -1,11 +1,16 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_theme.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_radius.dart';
+import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme.dart';
+import '../../presentation/widgets/common/app_app_bar.dart';
+import '../../presentation/widgets/common/section_header.dart';
+import '../../presentation/widgets/custom_widgets.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/progress_viewmodel.dart';
-import '../widgets/custom_widgets.dart';
 
 class ProgressAnalyticsScreen extends StatelessWidget {
   const ProgressAnalyticsScreen({super.key});
@@ -13,10 +18,10 @@ class ProgressAnalyticsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final user = context.watch<AuthViewModel>().user;
     final progressVM = context.watch<ProgressViewModel>();
 
-    // Keep progress synchronized with user totalXp
     if (user != null && progressVM.totalXp != user.totalXp) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         progressVM.updateWithUser(user);
@@ -24,41 +29,59 @@ class ProgressAnalyticsScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Performance & Analytics'),
-      ),
+      appBar: const AppAppBar(title: 'Performance & Analytics'),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppTheme.spaceLg),
+        padding: AppSpacing.screenPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            GlassContainer(
+            Container(
+              padding: AppSpacing.cardPadding,
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                borderRadius: AppRadius.radiusLg,
+                border: Border.all(
+                  color: isDark ? AppColors.outlineDark : AppColors.outlineLight,
+                ),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Rank: Level ${progressVM.currentLevel} Master', style: theme.textTheme.titleMedium),
-                      Text('${progressVM.totalXp} / ${progressVM.nextLevelXp} XP', style: const TextStyle(fontWeight: FontWeight.w700)),
+                      Text(
+                        'Rank: Level ${progressVM.currentLevel} Master',
+                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        '${progressVM.totalXp} / ${progressVM.nextLevelXp} XP',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.xpGold),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: AppTheme.spaceSm),
-                  LinearProgressIndicator(
-                    value: progressVM.levelProgress,
-                    minHeight: 10,
-                    borderRadius: BorderRadius.circular(5),
-                    backgroundColor: theme.colorScheme.outline.withValues(alpha: 0.2),
-                    valueColor: const AlwaysStoppedAnimation(AppSemanticColors.xpGold),
+                  const SizedBox(height: AppSpacing.sm),
+                  ProgressBar(
+                    percent: progressVM.levelProgress,
+                    height: 10,
+                    color: AppColors.xpGold,
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: AppTheme.spaceXl),
-            Text('Weekly Study Time (Hours)', style: theme.textTheme.titleLarge),
-            const SizedBox(height: AppTheme.spaceMd),
-            SizedBox(
+            const SizedBox(height: AppSpacing.xl),
+            const SectionHeader(title: 'Weekly Study Time (Hours)'),
+            const SizedBox(height: AppSpacing.md),
+            Container(
               height: 200,
+              padding: AppSpacing.cardPadding,
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                borderRadius: AppRadius.radiusLg,
+                border: Border.all(
+                  color: isDark ? AppColors.outlineDark : AppColors.outlineLight,
+                ),
+              ),
               child: BarChart(
                 BarChartData(
                   alignment: BarChartAlignment.spaceAround,
@@ -95,19 +118,19 @@ class ProgressAnalyticsScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: AppTheme.space2xl),
-            Text('Topic Strength Breakdown', style: theme.textTheme.titleLarge),
-            const SizedBox(height: AppTheme.spaceMd),
+            const SizedBox(height: AppSpacing.xl),
+            const SectionHeader(title: 'Topic Strength Breakdown'),
+            const SizedBox(height: AppSpacing.md),
             ...progressVM.topicProficiencies.map(
               (topic) => _TopicStatTile(
                 title: topic.title,
                 percent: topic.percent,
                 tier: topic.tier,
                 color: topic.percent > 0.8
-                    ? Colors.green
+                    ? AppColors.success
                     : topic.percent > 0.6
-                        ? Colors.blue
-                        : Colors.orange,
+                        ? AppColors.info
+                        : AppColors.warning,
               ),
             ),
           ],
@@ -133,23 +156,22 @@ class _TopicStatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppTheme.spaceSm),
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
-              Text('$tier (${(percent * 100).toInt()}%)'),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text('$tier (${(percent * 100).toInt()}%)', style: TextStyle(fontWeight: FontWeight.bold, color: color)),
             ],
           ),
-          const SizedBox(height: 4),
-          LinearProgressIndicator(
-            value: percent,
+          const SizedBox(height: 6),
+          ProgressBar(
+            percent: percent,
+            height: 6,
             color: color,
-            backgroundColor: color.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(4),
           ),
         ],
       ),

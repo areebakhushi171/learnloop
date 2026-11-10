@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_theme.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_radius.dart';
+import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/dialog_utils.dart';
+import '../../presentation/widgets/common/app_app_bar.dart';
+import '../../presentation/widgets/common/app_button.dart';
+import '../../presentation/widgets/common/section_header.dart';
+import '../../presentation/widgets/custom_widgets.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/profile_viewmodel.dart';
 import '../../viewmodels/theme_viewmodel.dart';
-import '../widgets/custom_widgets.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -14,82 +20,85 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final user = context.watch<AuthViewModel>().user;
     final themeVM = context.watch<ThemeViewModel>();
     final profileVM = context.watch<ProfileViewModel>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Learner Profile'),
-      ),
+      appBar: const AppAppBar(title: 'Learner Profile'),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppTheme.spaceLg),
+        padding: AppSpacing.screenPadding,
         child: Column(
           children: [
             Center(
               child: Stack(
                 children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundImage: user?.photoUrl != null
-                        ? NetworkImage(user!.photoUrl!)
-                        : null,
-                    child: user?.photoUrl == null
-                        ? const Icon(Icons.person, size: 50)
-                        : null,
+                  AppAvatar(
+                    name: user?.displayName ?? 'Learner',
+                    radius: 48,
+                    imageUrl: user?.photoUrl,
                   ),
                   Positioned(
                     bottom: 0,
                     right: 0,
-                    child: CircleAvatar(
-                      radius: 18,
-                      backgroundColor: theme.colorScheme.primary,
-                      child: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.camera_alt_rounded, size: 16, color: Colors.white),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: AppTheme.spaceMd),
+            const SizedBox(height: AppSpacing.md),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(user?.displayName ?? 'Learner', style: theme.textTheme.headlineMedium),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    (user?.role ?? 'student').toUpperCase(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                Text(
+                  user?.displayName ?? 'Learner',
+                  style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                AppBadge(
+                  label: (user?.role ?? 'student').toUpperCase(),
+                  backgroundColor: theme.colorScheme.primary,
+                  textColor: Colors.white,
                 ),
               ],
             ),
+            const SizedBox(height: 2),
             Text(user?.email ?? '', style: theme.textTheme.bodySmall),
-            const SizedBox(height: AppTheme.space2xl),
-            GlassContainer(
+            const SizedBox(height: AppSpacing.xl),
+
+            // Theme Accent Palette Selection
+            Container(
+              padding: AppSpacing.cardPadding,
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                borderRadius: AppRadius.radiusLg,
+                border: Border.all(
+                  color: isDark ? AppColors.outlineDark : AppColors.outlineLight,
+                ),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Accent Color Palette', style: theme.textTheme.titleMedium),
-                  const SizedBox(height: AppTheme.spaceSm),
+                  const SectionHeader(title: 'Accent Color Palette'),
+                  const SizedBox(height: AppSpacing.sm),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: AppAccentPalette.values.map((palette) {
                       final isSelected = palette == themeVM.accentPalette;
                       return GestureDetector(
                         onTap: () => themeVM.setAccentPalette(palette),
-                        child: Container(
-                          width: 44,
-                          height: 44,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 42,
+                          height: 42,
                           decoration: BoxDecoration(
                             color: palette.primary,
                             shape: BoxShape.circle,
@@ -98,11 +107,11 @@ class ProfileScreen extends StatelessWidget {
                               width: 3,
                             ),
                             boxShadow: isSelected
-                                ? [BoxShadow(color: palette.primary, blurRadius: 8)]
+                                ? [BoxShadow(color: palette.primary.withValues(alpha: 0.5), blurRadius: 10)]
                                 : null,
                           ),
                           child: isSelected
-                              ? const Icon(Icons.check, color: Colors.white, size: 20)
+                              ? const Icon(Icons.check_rounded, color: Colors.white, size: 20)
                               : null,
                         ),
                       );
@@ -111,12 +120,22 @@ class ProfileScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: AppTheme.spaceLg),
-            GlassContainer(
+            const SizedBox(height: AppSpacing.md),
+
+            // Appearance Mode Dropdown
+            Container(
+              padding: AppSpacing.cardPadding,
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                borderRadius: AppRadius.radiusLg,
+                border: Border.all(
+                  color: isDark ? AppColors.outlineDark : AppColors.outlineLight,
+                ),
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Appearance Mode', style: theme.textTheme.titleMedium),
+                  Text('Appearance Mode', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                   DropdownButton<ThemeMode>(
                     value: themeVM.themeMode,
                     onChanged: (mode) {
@@ -133,17 +152,28 @@ class ProfileScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: AppTheme.space2xl),
-            OutlinedButton.icon(
+            const SizedBox(height: AppSpacing.xxl),
+
+            AppButton(
+              text: 'Sign Out',
+              icon: Icons.logout_rounded,
+              variant: AppButtonVariant.danger,
               onPressed: () async {
-                await profileVM.signOut();
-                if (context.mounted) {
-                  context.read<AuthViewModel>().signOut();
-                  context.go('/auth');
+                final confirm = await DialogUtils.showConfirm(
+                  context,
+                  title: 'Sign Out',
+                  message: 'Are you sure you want to sign out of LearnLoop?',
+                  confirmText: 'Sign Out',
+                  isDanger: true,
+                );
+                if (confirm == true && context.mounted) {
+                  await profileVM.signOut();
+                  if (context.mounted) {
+                    context.read<AuthViewModel>().signOut();
+                    context.go('/auth');
+                  }
                 }
               },
-              icon: const Icon(Icons.logout_rounded),
-              label: const Text('Sign Out'),
             ),
           ],
         ),

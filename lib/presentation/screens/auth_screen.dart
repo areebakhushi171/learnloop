@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_theme.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_radius.dart';
+import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/screen_utils.dart';
+import '../../core/utils/snackbar_utils.dart';
+import '../../presentation/widgets/common/app_button.dart';
+import '../../presentation/widgets/common/app_text_field.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 
 enum AuthMode { login, signup, forgotPassword }
@@ -121,9 +126,7 @@ class _AuthScreenState extends State<AuthScreen> {
       }
     } else {
       final error = viewModel.errorMessage ?? 'Sign in failed. Check credentials.';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error), backgroundColor: AppSemanticColors.error, behavior: SnackBarBehavior.floating),
-      );
+      SnackbarUtils.showError(context, error);
     }
   }
 
@@ -140,18 +143,14 @@ class _AuthScreenState extends State<AuthScreen> {
 
     if (!mounted) return;
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(viewModel.successMessage ?? 'Account created successfully!'), backgroundColor: AppSemanticColors.success, behavior: SnackBarBehavior.floating),
-      );
+      SnackbarUtils.showSuccess(context, viewModel.successMessage ?? 'Account created successfully!');
       final user = viewModel.user;
       if (user != null) {
         context.go(user.isAdmin ? '/admin-dashboard' : '/home');
       }
     } else {
       final error = viewModel.errorMessage ?? 'Signup failed. Please try again.';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error), backgroundColor: AppSemanticColors.error, behavior: SnackBarBehavior.floating),
-      );
+      SnackbarUtils.showError(context, error);
     }
   }
 
@@ -164,21 +163,18 @@ class _AuthScreenState extends State<AuthScreen> {
 
     if (!mounted) return;
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(viewModel.successMessage ?? 'Password reset link sent to your inbox.'), backgroundColor: AppSemanticColors.success, behavior: SnackBarBehavior.floating),
-      );
+      SnackbarUtils.showSuccess(context, viewModel.successMessage ?? 'Password reset link sent to your inbox.');
       _switchMode(AuthMode.login);
     } else {
       final error = viewModel.errorMessage ?? 'Failed to send reset email.';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error), backgroundColor: AppSemanticColors.error, behavior: SnackBarBehavior.floating),
-      );
+      SnackbarUtils.showError(context, error);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final authViewModel = context.watch<AuthViewModel>();
     final isTablet = ScreenUtils.isTablet(context);
 
@@ -189,105 +185,108 @@ class _AuthScreenState extends State<AuthScreen> {
           child: Center(
             child: SingleChildScrollView(
               padding: EdgeInsets.symmetric(
-                horizontal: isTablet ? 48.0 : AppTheme.spaceLg,
-                vertical: AppTheme.spaceXl,
+                horizontal: isTablet ? 48.0 : AppSpacing.lg,
+                vertical: AppSpacing.xl,
               ),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 480),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // App Logo Icon
-                    Center(
-                      child: Container(
-                        padding: const EdgeInsets.all(22),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.school_rounded,
-                          size: 56,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: Container(
+                  padding: AppSpacing.cardPadding,
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                    borderRadius: AppRadius.radiusXxl,
+                    border: Border.all(
+                      color: isDark ? AppColors.outlineDark : AppColors.outlineLight,
+                      width: 1,
                     ),
-                    const SizedBox(height: AppTheme.spaceXl),
-
-                    // Heading Title & Subtitle
-                    Text(
-                      _getHeaderTitle(),
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.headlineLarge?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: AppTheme.spaceXs),
-                    Text(
-                      _getHeaderSubtitle(),
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
                       ),
-                    ),
-                    const SizedBox(height: AppTheme.spaceXl),
-
-                    // Render Form
-                    if (_mode == AuthMode.login)
-                      Form(
-                        key: _loginFormKey,
-                        autovalidateMode: AutovalidateMode.onUserInteraction,
-                        child: _buildLoginForm(theme),
-                      ),
-                    if (_mode == AuthMode.signup)
-                      Form(
-                        key: _signupFormKey,
-                        autovalidateMode: AutovalidateMode.onUserInteraction,
-                        child: _buildSignupForm(theme),
-                      ),
-                    if (_mode == AuthMode.forgotPassword)
-                      Form(
-                        key: _forgotFormKey,
-                        autovalidateMode: AutovalidateMode.onUserInteraction,
-                        child: _buildForgotPasswordForm(theme),
-                      ),
-
-                    const SizedBox(height: AppTheme.spaceXl),
-
-                    // Submit Button
-                    SizedBox(
-                      height: 50,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.colorScheme.primary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Header Branding
+                      Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            gradient: AppGradients.primaryLinear(
+                              theme.colorScheme.primary,
+                              AppColors.accentLight,
+                            ),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.school_rounded,
+                            size: 44,
+                            color: Colors.white,
                           ),
                         ),
-                        onPressed: authViewModel.isLoading
-                            ? null
-                            : () {
-                                if (_mode == AuthMode.login) _handleLogin();
-                                if (_mode == AuthMode.signup) _handleSignup();
-                                if (_mode == AuthMode.forgotPassword) _handleForgotPassword();
-                              },
-                        child: authViewModel.isLoading
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
-                              )
-                            : Text(
-                                _getSubmitButtonText(),
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
                       ),
-                    ),
-                    const SizedBox(height: AppTheme.spaceLg),
+                      const SizedBox(height: AppSpacing.lg),
 
-                    // Footer Links
-                    _buildFooterNavigation(theme),
-                  ],
+                      // Heading Title & Subtitle
+                      Text(
+                        _getHeaderTitle(),
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        _getHeaderSubtitle(),
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+
+                      // Form Body
+                      if (_mode == AuthMode.login)
+                        Form(
+                          key: _loginFormKey,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          child: _buildLoginForm(theme),
+                        ),
+                      if (_mode == AuthMode.signup)
+                        Form(
+                          key: _signupFormKey,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          child: _buildSignupForm(theme),
+                        ),
+                      if (_mode == AuthMode.forgotPassword)
+                        Form(
+                          key: _forgotFormKey,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          child: _buildForgotPasswordForm(theme),
+                        ),
+
+                      const SizedBox(height: AppSpacing.xl),
+
+                      // Primary Button
+                      AppButton(
+                        text: _getSubmitButtonText(),
+                        isLoading: authViewModel.isLoading,
+                        onPressed: () {
+                          if (_mode == AuthMode.login) _handleLogin();
+                          if (_mode == AuthMode.signup) _handleSignup();
+                          if (_mode == AuthMode.forgotPassword) _handleForgotPassword();
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+
+                      // Footer Navigation Links
+                      _buildFooterNavigation(theme),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -333,40 +332,27 @@ class _AuthScreenState extends State<AuthScreen> {
   Widget _buildLoginForm(ThemeData theme) {
     return Column(
       children: [
-        TextFormField(
+        AppTextField(
           controller: _loginEmailController,
-          focusNode: _loginEmailFocus,
+          label: 'Email Address',
+          hint: 'name@example.com',
+          prefixIcon: Icons.mail_outline_rounded,
           keyboardType: TextInputType.emailAddress,
-          textInputAction: TextInputAction.next,
-          decoration: const InputDecoration(
-            labelText: 'Email Address',
-            prefixIcon: Icon(Icons.mail_outline_rounded),
-            hintText: 'name@example.com',
-            border: OutlineInputBorder(),
-          ),
           validator: _validateEmail,
-          onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_loginPasswordFocus),
         ),
-        const SizedBox(height: AppTheme.spaceMd),
-        TextFormField(
+        const SizedBox(height: AppSpacing.md),
+        AppTextField(
           controller: _loginPasswordController,
-          focusNode: _loginPasswordFocus,
-          keyboardType: TextInputType.visiblePassword,
-          textInputAction: TextInputAction.done,
+          label: 'Password',
+          prefixIcon: Icons.lock_outline_rounded,
           obscureText: _obscureLoginPassword,
-          decoration: InputDecoration(
-            labelText: 'Password',
-            prefixIcon: const Icon(Icons.lock_outline_rounded),
-            border: const OutlineInputBorder(),
-            suffixIcon: IconButton(
-              icon: Icon(_obscureLoginPassword ? Icons.visibility_off_rounded : Icons.visibility_rounded),
-              onPressed: () => setState(() => _obscureLoginPassword = !_obscureLoginPassword),
-            ),
+          suffixIcon: IconButton(
+            icon: Icon(_obscureLoginPassword ? Icons.visibility_off_rounded : Icons.visibility_rounded, size: 20),
+            onPressed: () => setState(() => _obscureLoginPassword = !_obscureLoginPassword),
           ),
           validator: _validatePassword,
-          onFieldSubmitted: (_) => _handleLogin(),
         ),
-        const SizedBox(height: AppTheme.spaceXs),
+        const SizedBox(height: AppSpacing.xs),
         Align(
           alignment: Alignment.centerRight,
           child: TextButton(
@@ -381,74 +367,46 @@ class _AuthScreenState extends State<AuthScreen> {
   Widget _buildSignupForm(ThemeData theme) {
     return Column(
       children: [
-        TextFormField(
+        AppTextField(
           controller: _signupNameController,
-          focusNode: _signupNameFocus,
+          label: 'Full Name',
+          hint: 'John Doe',
+          prefixIcon: Icons.person_outline_rounded,
           keyboardType: TextInputType.name,
-          textCapitalization: TextCapitalization.words,
-          textInputAction: TextInputAction.next,
-          decoration: const InputDecoration(
-            labelText: 'Full Name',
-            prefixIcon: Icon(Icons.person_outline_rounded),
-            hintText: 'John Doe',
-            border: OutlineInputBorder(),
-          ),
           validator: _validateName,
-          onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_signupEmailFocus),
         ),
-        const SizedBox(height: AppTheme.spaceMd),
-        TextFormField(
+        const SizedBox(height: AppSpacing.md),
+        AppTextField(
           controller: _signupEmailController,
-          focusNode: _signupEmailFocus,
+          label: 'Email Address',
+          hint: 'name@example.com',
+          prefixIcon: Icons.mail_outline_rounded,
           keyboardType: TextInputType.emailAddress,
-          textInputAction: TextInputAction.next,
-          decoration: const InputDecoration(
-            labelText: 'Email Address',
-            prefixIcon: Icon(Icons.mail_outline_rounded),
-            hintText: 'name@example.com',
-            border: OutlineInputBorder(),
-          ),
           validator: _validateEmail,
-          onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_signupPasswordFocus),
         ),
-        const SizedBox(height: AppTheme.spaceMd),
-        TextFormField(
+        const SizedBox(height: AppSpacing.md),
+        AppTextField(
           controller: _signupPasswordController,
-          focusNode: _signupPasswordFocus,
-          keyboardType: TextInputType.visiblePassword,
-          textInputAction: TextInputAction.next,
+          label: 'Password',
+          prefixIcon: Icons.lock_outline_rounded,
           obscureText: _obscureSignupPassword,
-          decoration: InputDecoration(
-            labelText: 'Password',
-            prefixIcon: const Icon(Icons.lock_outline_rounded),
-            helperText: 'At least 6 characters required',
-            border: const OutlineInputBorder(),
-            suffixIcon: IconButton(
-              icon: Icon(_obscureSignupPassword ? Icons.visibility_off_rounded : Icons.visibility_rounded),
-              onPressed: () => setState(() => _obscureSignupPassword = !_obscureSignupPassword),
-            ),
+          suffixIcon: IconButton(
+            icon: Icon(_obscureSignupPassword ? Icons.visibility_off_rounded : Icons.visibility_rounded, size: 20),
+            onPressed: () => setState(() => _obscureSignupPassword = !_obscureSignupPassword),
           ),
           validator: _validatePassword,
-          onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_signupConfirmPasswordFocus),
         ),
-        const SizedBox(height: AppTheme.spaceMd),
-        TextFormField(
+        const SizedBox(height: AppSpacing.md),
+        AppTextField(
           controller: _signupConfirmPasswordController,
-          focusNode: _signupConfirmPasswordFocus,
-          keyboardType: TextInputType.visiblePassword,
-          textInputAction: TextInputAction.done,
+          label: 'Confirm Password',
+          prefixIcon: Icons.lock_reset_rounded,
           obscureText: _obscureConfirmPassword,
-          decoration: InputDecoration(
-            labelText: 'Confirm Password',
-            prefixIcon: const Icon(Icons.lock_reset_rounded),
-            border: const OutlineInputBorder(),
-            suffixIcon: IconButton(
-              icon: Icon(_obscureConfirmPassword ? Icons.visibility_off_rounded : Icons.visibility_rounded),
-              onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-            ),
+          suffixIcon: IconButton(
+            icon: Icon(_obscureConfirmPassword ? Icons.visibility_off_rounded : Icons.visibility_rounded, size: 20),
+            onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
           ),
           validator: _validateConfirmPassword,
-          onFieldSubmitted: (_) => _handleSignup(),
         ),
       ],
     );
@@ -457,19 +415,13 @@ class _AuthScreenState extends State<AuthScreen> {
   Widget _buildForgotPasswordForm(ThemeData theme) {
     return Column(
       children: [
-        TextFormField(
+        AppTextField(
           controller: _forgotEmailController,
-          focusNode: _forgotEmailFocus,
+          label: 'Email Address',
+          hint: 'Enter your registered email',
+          prefixIcon: Icons.mail_outline_rounded,
           keyboardType: TextInputType.emailAddress,
-          textInputAction: TextInputAction.done,
-          decoration: const InputDecoration(
-            labelText: 'Email Address',
-            prefixIcon: Icon(Icons.mail_outline_rounded),
-            hintText: 'Enter your registered email',
-            border: OutlineInputBorder(),
-          ),
           validator: _validateEmail,
-          onFieldSubmitted: (_) => _handleForgotPassword(),
         ),
       ],
     );

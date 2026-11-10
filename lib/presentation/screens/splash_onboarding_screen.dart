@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_theme.dart';
+import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/constants/app_radius.dart';
+import '../../core/constants/app_spacing.dart';
+import '../../core/theme/app_colors.dart';
+import '../../presentation/widgets/common/app_button.dart';
+import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/splash_onboarding_viewmodel.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -21,12 +26,33 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _handleRouting() async {
-    await Future.delayed(const Duration(milliseconds: 2200));
-    if (!mounted) return;
-    final viewModel = context.read<SplashOnboardingViewModel>();
+    final stopwatch = Stopwatch()..start();
 
-    if (!viewModel.hasSeenOnboarding) {
+    final splashVM = context.read<SplashOnboardingViewModel>();
+    final authVM = context.read<AuthViewModel>();
+
+    while (!authVM.isInitialized && stopwatch.elapsedMilliseconds < 3000) {
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+
+    final elapsed = stopwatch.elapsedMilliseconds;
+    if (elapsed < 2000) {
+      await Future.delayed(Duration(milliseconds: 2000 - elapsed));
+    }
+
+    if (!mounted) return;
+
+    if (!splashVM.hasSeenOnboarding) {
       context.go('/onboarding');
+      return;
+    }
+
+    if (authVM.isAuthenticated && authVM.user != null) {
+      if (authVM.user!.isAdmin) {
+        context.go('/admin-dashboard');
+      } else {
+        context.go('/home');
+      }
     } else {
       context.go('/auth');
     }
@@ -41,27 +67,30 @@ class _SplashScreenState extends State<SplashScreen> {
         width: double.infinity,
         height: double.infinity,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              theme.colorScheme.primary,
-              theme.colorScheme.secondary,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+          gradient: AppGradients.heroHeader(
+            theme.colorScheme.primary,
+            AppColors.accentLight,
           ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(28),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.3),
+                  color: Colors.white.withValues(alpha: 0.35),
                   width: 2,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
               child: const Icon(
                 Icons.auto_stories_rounded,
@@ -73,15 +102,15 @@ class _SplashScreenState extends State<SplashScreen> {
                 .scale(duration: 800.ms, curve: Curves.easeOutBack)
                 .then()
                 .shimmer(duration: 1200.ms),
-            const SizedBox(height: AppTheme.spaceLg),
+            const SizedBox(height: AppSpacing.xl),
             Text(
               AppConstants.appName,
-              style: theme.textTheme.displayMedium?.copyWith(
+              style: theme.textTheme.displayLarge?.copyWith(
                 color: Colors.white,
-                letterSpacing: 0.5,
+                letterSpacing: -0.5,
               ),
             ).animate().fadeIn(delay: 300.ms, duration: 600.ms).slideY(begin: 0.2, end: 0),
-            const SizedBox(height: AppTheme.spaceXs),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               AppConstants.appTagline,
               style: theme.textTheme.bodyMedium?.copyWith(
@@ -146,19 +175,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final viewModel = context.watch<SplashOnboardingViewModel>();
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
-            Align(
-              alignment: Alignment.topRight,
-              child: TextButton(
-                onPressed: _finishOnboarding,
-                child: Text(
-                  'Skip',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: theme.colorScheme.primary,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+              child: Align(
+                alignment: Alignment.topRight,
+                child: TextButton(
+                  onPressed: _finishOnboarding,
+                  child: Text(
+                    'Skip',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -171,7 +205,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 itemBuilder: (context, index) {
                   final page = _pages[index];
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceXl),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -179,29 +213,31 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           width: 140,
                           height: 140,
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                            color: theme.colorScheme.primary.withValues(alpha: 0.12),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             _getIconData(page['icon']!),
-                            size: 72,
+                            size: 68,
                             color: theme.colorScheme.primary,
                           ),
                         )
                             .animate(target: viewModel.currentPage == index ? 1 : 0)
                             .scale(duration: 500.ms, curve: Curves.easeOutBack),
-                        const SizedBox(height: AppTheme.space2xl),
+                        const SizedBox(height: AppSpacing.xxl),
                         Text(
                           page['title']!,
                           textAlign: TextAlign.center,
-                          style: theme.textTheme.headlineLarge,
+                          style: theme.textTheme.headlineLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        const SizedBox(height: AppTheme.spaceMd),
+                        const SizedBox(height: AppSpacing.md),
                         Text(
                           page['description']!,
                           textAlign: TextAlign.center,
                           style: theme.textTheme.bodyLarge?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                           ),
                         ),
                       ],
@@ -211,7 +247,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(AppTheme.spaceXl),
+              padding: AppSpacing.cardPadding,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -221,32 +257,32 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       (i) => AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
                         margin: const EdgeInsets.only(right: 6),
-                        width: viewModel.currentPage == i ? 24 : 8,
+                        width: viewModel.currentPage == i ? 28 : 8,
                         height: 8,
                         decoration: BoxDecoration(
                           color: viewModel.currentPage == i
                               ? theme.colorScheme.primary
-                              : theme.colorScheme.outline.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(4),
+                              : (isDark ? AppColors.outlineDark : AppColors.outlineLight),
+                          borderRadius: AppRadius.radiusFull,
                         ),
                       ),
                     ),
                   ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(130, 48),
+                  SizedBox(
+                    width: 130,
+                    child: AppButton(
+                      text: viewModel.currentPage == _pages.length - 1 ? 'Get Started' : 'Next',
+                      onPressed: () {
+                        if (viewModel.currentPage < _pages.length - 1) {
+                          _controller.nextPage(
+                            duration: const Duration(milliseconds: 350),
+                            curve: Curves.easeInOut,
+                          );
+                        } else {
+                          _finishOnboarding();
+                        }
+                      },
                     ),
-                    onPressed: () {
-                      if (viewModel.currentPage < _pages.length - 1) {
-                        _controller.nextPage(
-                          duration: const Duration(milliseconds: 350),
-                          curve: Curves.easeInOut,
-                        );
-                      } else {
-                        _finishOnboarding();
-                      }
-                    },
-                    child: Text(viewModel.currentPage == _pages.length - 1 ? 'Get Started' : 'Next'),
                   ),
                 ],
               ),

@@ -2,17 +2,27 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_theme.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_radius.dart';
+import '../../core/constants/app_spacing.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/utils/dialog_utils.dart';
+import '../../core/utils/snackbar_utils.dart';
 import '../../data/models/course_model.dart';
 import '../../data/models/lesson_model.dart';
 import '../../data/models/user_model.dart';
+import '../../presentation/widgets/common/app_app_bar.dart';
+import '../../presentation/widgets/common/app_button.dart';
+import '../../presentation/widgets/common/app_text_field.dart';
+import '../../presentation/widgets/common/section_header.dart';
+import '../../presentation/widgets/custom_widgets.dart';
+import '../../presentation/widgets/states/empty_state.dart';
 import '../../viewmodels/admin_viewmodel.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/home_viewmodel.dart';
 import '../../viewmodels/profile_viewmodel.dart';
 import '../../viewmodels/theme_viewmodel.dart';
-import '../widgets/custom_widgets.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -78,7 +88,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 16.0),
                 child: CircleAvatar(
                   backgroundColor: Theme.of(context).colorScheme.primary,
-                  child: const Icon(Icons.admin_panel_settings, color: Colors.white),
+                  child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.white),
                 ),
               ),
               destinations: navigationDestinations
@@ -131,121 +141,95 @@ class _AdminOverviewTab extends StatelessWidget {
     String level = courseToEdit?.level ?? 'Beginner';
     bool isFeatured = courseToEdit?.isFeatured ?? false;
 
-    showDialog(
+    AppBottomSheet.show(
       context: context,
-      builder: (dialogCtx) {
-        return AlertDialog(
-          title: Text(courseToEdit == null ? 'Create New Course' : 'Edit Course'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(labelText: 'Course Title'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: descController,
-                  maxLines: 2,
-                  decoration: const InputDecoration(labelText: 'Description'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: categoryController,
-                  decoration: const InputDecoration(labelText: 'Category'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: instructorController,
-                  decoration: const InputDecoration(labelText: 'Instructor Name'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: thumbnailController,
-                  decoration: const InputDecoration(labelText: 'Thumbnail Image URL'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: durationController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Duration (Minutes)'),
-                ),
-                const SizedBox(height: 12),
-                StatefulBuilder(
-                  builder: (ctx, setDialogState) {
-                    return Column(
-                      children: [
-                        DropdownButtonFormField<String>(
-                          initialValue: level,
-                          decoration: const InputDecoration(labelText: 'Difficulty Level'),
-                          items: const [
-                            DropdownMenuItem(value: 'Beginner', child: Text('Beginner')),
-                            DropdownMenuItem(value: 'Intermediate', child: Text('Intermediate')),
-                            DropdownMenuItem(value: 'Advanced', child: Text('Advanced')),
-                          ],
-                          onChanged: (val) {
-                            if (val != null) setDialogState(() => level = val);
-                          },
-                        ),
-                        SwitchListTile(
-                          title: const Text('Featured Course'),
-                          value: isFeatured,
-                          onChanged: (val) => setDialogState(() => isFeatured = val),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ],
-            ),
+      title: courseToEdit == null ? 'Create New Course' : 'Edit Course',
+      child: Column(
+        children: [
+          AppTextField(controller: titleController, label: 'Course Title'),
+          const SizedBox(height: AppSpacing.md),
+          AppTextField(controller: descController, label: 'Description', maxLines: 2),
+          const SizedBox(height: AppSpacing.md),
+          AppTextField(controller: categoryController, label: 'Category'),
+          const SizedBox(height: AppSpacing.md),
+          AppTextField(controller: instructorController, label: 'Instructor Name'),
+          const SizedBox(height: AppSpacing.md),
+          AppTextField(controller: thumbnailController, label: 'Thumbnail Image URL'),
+          const SizedBox(height: AppSpacing.md),
+          AppTextField(
+            controller: durationController,
+            label: 'Duration (Minutes)',
+            keyboardType: TextInputType.number,
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogCtx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (titleController.text.trim().isEmpty) return;
+          const SizedBox(height: AppSpacing.md),
+          StatefulBuilder(
+            builder: (ctx, setDialogState) {
+              return Column(
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: level,
+                    decoration: const InputDecoration(labelText: 'Difficulty Level'),
+                    items: const [
+                      DropdownMenuItem(value: 'Beginner', child: Text('Beginner')),
+                      DropdownMenuItem(value: 'Intermediate', child: Text('Intermediate')),
+                      DropdownMenuItem(value: 'Advanced', child: Text('Advanced')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) setDialogState(() => level = val);
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  SwitchListTile(
+                    title: const Text('Featured Course', style: TextStyle(fontWeight: FontWeight.bold)),
+                    value: isFeatured,
+                    onChanged: (val) => setDialogState(() => isFeatured = val),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          AppButton(
+            text: 'Save Course',
+            icon: Icons.check_circle_rounded,
+            onPressed: () async {
+              if (titleController.text.trim().isEmpty) return;
 
-                final course = CourseModel(
-                  id: courseToEdit?.id ?? '',
-                  title: titleController.text.trim(),
-                  description: descController.text.trim(),
-                  category: categoryController.text.trim(),
-                  instructorName: instructorController.text.trim(),
-                  thumbnailUrl: thumbnailController.text.trim(),
-                  durationMinutes: int.tryParse(durationController.text.trim()) ?? 90,
-                  totalLessons: courseToEdit?.totalLessons ?? 0,
-                  level: level,
-                  isFeatured: isFeatured,
-                  createdAt: courseToEdit?.createdAt ?? DateTime.now(),
-                );
+              final course = CourseModel(
+                id: courseToEdit?.id ?? '',
+                title: titleController.text.trim(),
+                description: descController.text.trim(),
+                category: categoryController.text.trim(),
+                instructorName: instructorController.text.trim(),
+                thumbnailUrl: thumbnailController.text.trim(),
+                durationMinutes: int.tryParse(durationController.text.trim()) ?? 90,
+                totalLessons: courseToEdit?.totalLessons ?? 0,
+                level: level,
+                isFeatured: isFeatured,
+                createdAt: courseToEdit?.createdAt ?? DateTime.now(),
+              );
 
-                final adminVM = context.read<AdminViewModel>();
-                final ok = await adminVM.saveCourse(course);
-                if (context.mounted) {
-                  Navigator.pop(dialogCtx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(ok ? 'Course saved!' : 'Failed to save course.'),
-                      backgroundColor: ok ? AppSemanticColors.success : AppSemanticColors.error,
-                    ),
-                  );
+              final adminVM = context.read<AdminViewModel>();
+              final ok = await adminVM.saveCourse(course);
+              if (context.mounted) {
+                Navigator.pop(context);
+                if (ok) {
+                  SnackbarUtils.showSuccess(context, 'Course saved successfully!');
+                } else {
+                  SnackbarUtils.showError(context, 'Failed to save course.');
                 }
-              },
-              child: const Text('Save Course'),
-            ),
-          ],
-        );
-      },
+              }
+            },
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final authVM = context.watch<AuthViewModel>();
     final adminVM = context.watch<AdminViewModel>();
     final user = authVM.user;
@@ -273,29 +257,29 @@ class _AdminOverviewTab extends StatelessWidget {
                     final globalLessons = lessonSnap.data ?? [];
 
                     return SingleChildScrollView(
-                      padding: const EdgeInsets.all(AppTheme.spaceLg),
+                      padding: AppSpacing.screenPadding,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Header Banner
                           Container(
-                            padding: const EdgeInsets.all(AppTheme.spaceLg),
+                            padding: AppSpacing.cardPadding,
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.primaryContainer,
-                              borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                              gradient: AppGradients.heroHeader(
+                                theme.colorScheme.primary,
+                                AppColors.accentLight,
+                              ),
+                              borderRadius: AppRadius.radiusXxl,
+                              boxShadow: AppTheme.softShadow(Colors.black, 0.1),
                             ),
                             child: Row(
                               children: [
-                                CircleAvatar(
+                                AppAvatar(
+                                  name: user?.displayName ?? 'Administrator',
                                   radius: 28,
-                                  backgroundColor: theme.colorScheme.primary,
-                                  child: const Icon(
-                                    Icons.admin_panel_settings_rounded,
-                                    color: Colors.white,
-                                    size: 32,
-                                  ),
+                                  imageUrl: user?.photoUrl,
                                 ),
-                                const SizedBox(width: AppTheme.spaceMd),
+                                const SizedBox(width: AppSpacing.md),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -304,234 +288,199 @@ class _AdminOverviewTab extends StatelessWidget {
                                         children: [
                                           Text(
                                             user?.displayName ?? 'Administrator',
-                                            style: theme.textTheme.titleLarge,
+                                            style: theme.textTheme.titleLarge?.copyWith(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                           const SizedBox(width: 8),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: theme.colorScheme.primary,
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                            child: const Text(
-                                              'ADMIN',
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
+                                          const AppBadge(
+                                            label: 'ADMIN',
+                                            backgroundColor: Colors.white,
+                                            textColor: Colors.black,
                                           ),
                                         ],
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
                                         user?.email ?? '',
-                                        style: theme.textTheme.bodySmall,
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          color: Colors.white.withValues(alpha: 0.85),
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.logout_rounded),
+                                  icon: const Icon(Icons.logout_rounded, color: Colors.white),
                                   tooltip: 'Sign Out',
                                   onPressed: () async {
-                                    await authVM.signOut();
-                                    if (context.mounted) {
-                                      context.go('/auth');
+                                    final confirm = await DialogUtils.showConfirm(
+                                      context,
+                                      title: 'Sign Out',
+                                      message: 'Are you sure you want to sign out?',
+                                      confirmText: 'Sign Out',
+                                      isDanger: true,
+                                    );
+                                    if (confirm == true && context.mounted) {
+                                      await authVM.signOut();
+                                      if (context.mounted) {
+                                        context.go('/auth');
+                                      }
                                     }
                                   },
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(height: AppTheme.spaceXl),
+                          const SizedBox(height: AppSpacing.xl),
 
-                          // Dashboard Metrics Header
+                          // Control Center Header
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Expanded(
-                                child: Text(
-                                  'LMS Control Center',
-                                  style: theme.textTheme.titleLarge,
-                                  overflow: TextOverflow.ellipsis,
+                              Text('LMS Control Center', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                              SizedBox(
+                                width: 140,
+                                height: 38,
+                                child: AppButton(
+                                  text: 'New Course',
+                                  icon: Icons.add_rounded,
+                                  onPressed: () => _showCourseDialog(context),
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  minimumSize: const Size(110, 38),
-                                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                                ),
-                                onPressed: () => _showCourseDialog(context),
-                                icon: const Icon(Icons.add, size: 18),
-                                label: const Text('New Course'),
                               ),
                             ],
                           ),
-                          const SizedBox(height: AppTheme.spaceMd),
+                          const SizedBox(height: AppSpacing.md),
 
                           // Real-Time Metrics Grid
                           GridView.count(
-                            crossAxisCount: MediaQuery.of(context).size.width > 600 ? 4 : 2,
+                            crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
-                            crossAxisSpacing: AppTheme.spaceMd,
-                            mainAxisSpacing: AppTheme.spaceMd,
-                            childAspectRatio: 1.25,
+                            crossAxisSpacing: AppSpacing.md,
+                            mainAxisSpacing: AppSpacing.md,
+                            childAspectRatio: 1.35,
                             children: [
-                              _MetricCard(
+                              StatCard(
                                 title: 'Registered Students',
                                 value: '${students.length}',
                                 icon: Icons.people_rounded,
                                 color: theme.colorScheme.primary,
                               ),
-                              _MetricCard(
+                              StatCard(
                                 title: 'Total Courses',
                                 value: '${courses.length}',
                                 icon: Icons.menu_book_rounded,
-                                color: AppSemanticColors.xpGold,
+                                color: AppColors.xpGold,
                               ),
-                              _MetricCard(
+                              StatCard(
                                 title: 'Total Lectures',
                                 value: '${globalLessons.length}',
                                 icon: Icons.play_lesson_rounded,
-                                color: Colors.purple,
+                                color: AppColors.accentLight,
                               ),
-                              _MetricCard(
+                              StatCard(
                                 title: 'Total Enrollments',
                                 value: '${enrollments.length}',
                                 icon: Icons.assignment_turned_in_rounded,
-                                color: AppSemanticColors.success,
+                                color: AppColors.success,
                               ),
-                              _MetricCard(
-                                title: 'Completed Enrollments',
+                              StatCard(
+                                title: 'Completed',
                                 value: '$completedEnrollments',
                                 icon: Icons.verified_rounded,
-                                color: Colors.teal,
+                                color: AppColors.secondaryLight,
                               ),
-                              _MetricCard(
-                                title: 'Active Enrollments',
+                              StatCard(
+                                title: 'Active Studies',
                                 value: '$inProgressEnrollments',
                                 icon: Icons.trending_up_rounded,
-                                color: Colors.orange,
+                                color: AppColors.warning,
                               ),
                             ],
                           ),
-                          const SizedBox(height: AppTheme.spaceXl),
+                          const SizedBox(height: AppSpacing.xl),
 
                           // Course Catalog Preview Section
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('Course Catalog (${courses.length})', style: theme.textTheme.titleMedium),
-                              TextButton(
-                                onPressed: () => onNavigateToTab(1),
-                                child: const Text('Manage All Courses'),
-                              ),
-                            ],
+                          SectionHeader(
+                            title: 'Course Catalog (${courses.length})',
+                            actionText: 'Manage All Courses',
+                            onActionPressed: () => onNavigateToTab(1),
                           ),
-                          const SizedBox(height: AppTheme.spaceSm),
+                          const SizedBox(height: AppSpacing.sm),
                           if (courses.isEmpty)
-                            Container(
-                              padding: const EdgeInsets.all(24),
-                              decoration: BoxDecoration(
-                                color: theme.cardTheme.color,
-                                borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                              ),
-                              child: Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(Icons.school_outlined, size: 48, color: Colors.grey),
-                                    const SizedBox(height: 12),
-                                    const Text('No courses found in database. Create courses from the Courses tab.'),
-                                  ],
-                                ),
-                              ),
+                            const EmptyState(
+                              icon: Icons.school_outlined,
+                              message: 'No courses found in database.',
                             )
                           else
                             ...courses.map((course) {
-                              return Card(
-                                margin: const EdgeInsets.only(bottom: AppTheme.spaceSm),
-                                child: ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundImage: NetworkImage(course.thumbnailUrl),
-                                    backgroundColor: theme.colorScheme.surfaceContainerHigh,
-                                  ),
-                                  title: Text(course.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                  subtitle: Text('${course.category} • ${course.level} • ${course.totalLessons} Lessons'),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.edit_outlined, color: Colors.blue),
-                                        onPressed: () => _showCourseDialog(context, courseToEdit: course),
+                              return SwipeActionTile(
+                                onEdit: () => _showCourseDialog(context, courseToEdit: course),
+                                onDelete: () async {
+                                  await adminVM.deleteCourse(course.id);
+                                },
+                                deleteTitle: 'Delete Course',
+                                deleteMessage: 'Are you sure you want to delete "${course.title}"?',
+                                child: Padding(
+                                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                                  child: Material(
+                                    color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                                    clipBehavior: Clip.antiAlias,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: AppRadius.radiusLg,
+                                      side: BorderSide(
+                                        color: isDark ? AppColors.outlineDark : AppColors.outlineLight,
                                       ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
-                                        onPressed: () async {
-                                          final confirm = await showDialog<bool>(
-                                            context: context,
-                                            builder: (ctx) => AlertDialog(
-                                              title: const Text('Delete Course'),
-                                              content: Text('Are you sure you want to delete "${course.title}"?'),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () => Navigator.pop(ctx, false),
-                                                  child: const Text('Cancel'),
-                                                ),
-                                                ElevatedButton(
-                                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                                  onPressed: () => Navigator.pop(ctx, true),
-                                                  child: const Text('Delete'),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                          if (confirm == true && context.mounted) {
-                                            await adminVM.deleteCourse(course.id);
-                                          }
-                                        },
+                                    ),
+                                    child: ListTile(
+                                      leading: CircleAvatar(
+                                        backgroundImage: NetworkImage(course.thumbnailUrl),
                                       ),
-                                    ],
+                                      title: Text(course.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                      subtitle: Text('${course.category} • ${course.level} • ${course.totalLessons} Lessons'),
+                                      trailing: const Icon(Icons.chevron_right_rounded),
+                                      onTap: () => context.go('/course/${course.id}'),
+                                    ),
                                   ),
-                                  onTap: () => context.go('/course/${course.id}'),
                                 ),
                               );
                             }),
-                          const SizedBox(height: AppTheme.spaceXl),
+                          const SizedBox(height: AppSpacing.xl),
 
                           // Students Roster Preview Section
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('Registered Students (${students.length})', style: theme.textTheme.titleMedium),
-                              TextButton(
-                                onPressed: () => onNavigateToTab(2),
-                                child: const Text('View All Students'),
-                              ),
-                            ],
+                          SectionHeader(
+                            title: 'Registered Students (${students.length})',
+                            actionText: 'View All Students',
+                            onActionPressed: () => onNavigateToTab(2),
                           ),
-                          const SizedBox(height: AppTheme.spaceSm),
+                          const SizedBox(height: AppSpacing.sm),
                           if (students.isEmpty)
-                            const Padding(
-                              padding: EdgeInsets.all(16.0),
-                              child: Text('No registered student records found.'),
+                            const EmptyState(
+                              icon: Icons.people_outline_rounded,
+                              message: 'No registered student records found.',
                             )
                           else
                             ...students.take(5).map((student) {
-                              return Card(
-                                margin: const EdgeInsets.only(bottom: AppTheme.spaceSm),
-                                child: ListTile(
-                                  leading: CircleAvatar(
-                                    child: Text(student.displayName.isNotEmpty ? student.displayName[0].toUpperCase() : 'S'),
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                                child: Material(
+                                  color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                                  clipBehavior: Clip.antiAlias,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: AppRadius.radiusLg,
+                                    side: BorderSide(
+                                      color: isDark ? AppColors.outlineDark : AppColors.outlineLight,
+                                    ),
                                   ),
-                                  title: Text(student.displayName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                  subtitle: Text('${student.email} • Streak: ${student.streakDays}d • ${student.totalXp} XP'),
-                                  trailing: const Icon(Icons.chevron_right_rounded),
-                                  onTap: () => onNavigateToTab(2),
+                                  child: ListTile(
+                                    leading: AppAvatar(name: student.displayName),
+                                    title: Text(student.displayName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                    subtitle: Text('${student.email} • Streak: ${student.streakDays}d • ${student.totalXp} XP'),
+                                    trailing: const Icon(Icons.chevron_right_rounded),
+                                    onTap: () => onNavigateToTab(2),
+                                  ),
                                 ),
                               );
                             }),
@@ -566,115 +515,88 @@ class _AdminCourseManagementTab extends StatelessWidget {
     String level = courseToEdit?.level ?? 'Beginner';
     bool isFeatured = courseToEdit?.isFeatured ?? false;
 
-    showDialog(
+    AppBottomSheet.show(
       context: context,
-      builder: (dialogCtx) {
-        return AlertDialog(
-          title: Text(courseToEdit == null ? 'Create New Course' : 'Edit Course'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(labelText: 'Course Title'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: descController,
-                  maxLines: 2,
-                  decoration: const InputDecoration(labelText: 'Description'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: categoryController,
-                  decoration: const InputDecoration(labelText: 'Category'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: instructorController,
-                  decoration: const InputDecoration(labelText: 'Instructor Name'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: thumbnailController,
-                  decoration: const InputDecoration(labelText: 'Thumbnail Image URL'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: durationController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Duration (Minutes)'),
-                ),
-                const SizedBox(height: 12),
-                StatefulBuilder(
-                  builder: (ctx, setDialogState) {
-                    return Column(
-                      children: [
-                        DropdownButtonFormField<String>(
-                          initialValue: level,
-                          decoration: const InputDecoration(labelText: 'Difficulty Level'),
-                          items: const [
-                            DropdownMenuItem(value: 'Beginner', child: Text('Beginner')),
-                            DropdownMenuItem(value: 'Intermediate', child: Text('Intermediate')),
-                            DropdownMenuItem(value: 'Advanced', child: Text('Advanced')),
-                          ],
-                          onChanged: (val) {
-                            if (val != null) setDialogState(() => level = val);
-                          },
-                        ),
-                        SwitchListTile(
-                          title: const Text('Featured Course'),
-                          value: isFeatured,
-                          onChanged: (val) => setDialogState(() => isFeatured = val),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ],
-            ),
+      title: courseToEdit == null ? 'Create New Course' : 'Edit Course',
+      child: Column(
+        children: [
+          AppTextField(controller: titleController, label: 'Course Title'),
+          const SizedBox(height: AppSpacing.md),
+          AppTextField(controller: descController, label: 'Description', maxLines: 2),
+          const SizedBox(height: AppSpacing.md),
+          AppTextField(controller: categoryController, label: 'Category'),
+          const SizedBox(height: AppSpacing.md),
+          AppTextField(controller: instructorController, label: 'Instructor Name'),
+          const SizedBox(height: AppSpacing.md),
+          AppTextField(controller: thumbnailController, label: 'Thumbnail Image URL'),
+          const SizedBox(height: AppSpacing.md),
+          AppTextField(
+            controller: durationController,
+            label: 'Duration (Minutes)',
+            keyboardType: TextInputType.number,
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogCtx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (titleController.text.trim().isEmpty) return;
+          const SizedBox(height: AppSpacing.md),
+          StatefulBuilder(
+            builder: (ctx, setDialogState) {
+              return Column(
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: level,
+                    decoration: const InputDecoration(labelText: 'Difficulty Level'),
+                    items: const [
+                      DropdownMenuItem(value: 'Beginner', child: Text('Beginner')),
+                      DropdownMenuItem(value: 'Intermediate', child: Text('Intermediate')),
+                      DropdownMenuItem(value: 'Advanced', child: Text('Advanced')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) setDialogState(() => level = val);
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  SwitchListTile(
+                    title: const Text('Featured Course', style: TextStyle(fontWeight: FontWeight.bold)),
+                    value: isFeatured,
+                    onChanged: (val) => setDialogState(() => isFeatured = val),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          AppButton(
+            text: 'Save Course',
+            icon: Icons.check_circle_rounded,
+            onPressed: () async {
+              if (titleController.text.trim().isEmpty) return;
 
-                final course = CourseModel(
-                  id: courseToEdit?.id ?? '',
-                  title: titleController.text.trim(),
-                  description: descController.text.trim(),
-                  category: categoryController.text.trim(),
-                  instructorName: instructorController.text.trim(),
-                  thumbnailUrl: thumbnailController.text.trim(),
-                  durationMinutes: int.tryParse(durationController.text.trim()) ?? 90,
-                  totalLessons: courseToEdit?.totalLessons ?? 0,
-                  level: level,
-                  isFeatured: isFeatured,
-                  createdAt: courseToEdit?.createdAt ?? DateTime.now(),
-                );
+              final course = CourseModel(
+                id: courseToEdit?.id ?? '',
+                title: titleController.text.trim(),
+                description: descController.text.trim(),
+                category: categoryController.text.trim(),
+                instructorName: instructorController.text.trim(),
+                thumbnailUrl: thumbnailController.text.trim(),
+                durationMinutes: int.tryParse(durationController.text.trim()) ?? 90,
+                totalLessons: courseToEdit?.totalLessons ?? 0,
+                level: level,
+                isFeatured: isFeatured,
+                createdAt: courseToEdit?.createdAt ?? DateTime.now(),
+              );
 
-                final adminVM = context.read<AdminViewModel>();
-                final ok = await adminVM.saveCourse(course);
-                if (context.mounted) {
-                  Navigator.pop(dialogCtx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(ok ? 'Course saved!' : 'Failed to save course.'),
-                      backgroundColor: ok ? AppSemanticColors.success : AppSemanticColors.error,
-                    ),
-                  );
+              final adminVM = context.read<AdminViewModel>();
+              final ok = await adminVM.saveCourse(course);
+              if (context.mounted) {
+                Navigator.pop(context);
+                if (ok) {
+                  SnackbarUtils.showSuccess(context, 'Course saved successfully!');
+                } else {
+                  SnackbarUtils.showError(context, 'Failed to save course.');
                 }
-              },
-              child: const Text('Save Course'),
-            ),
-          ],
-        );
-      },
+              }
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -685,91 +607,59 @@ class _AdminCourseManagementTab extends StatelessWidget {
     final durationController = TextEditingController(text: '${lessonToEdit?.durationMinutes ?? 10}');
     final orderController = TextEditingController(text: '${lessonToEdit?.orderIndex ?? 0}');
 
-    showDialog(
+    AppBottomSheet.show(
       context: context,
-      builder: (dialogCtx) {
-        return AlertDialog(
-          title: Text(lessonToEdit == null ? 'Add Lecture' : 'Edit Lecture'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(labelText: 'Lecture Title'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: descController,
-                  maxLines: 2,
-                  decoration: const InputDecoration(labelText: 'Description / Summary'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: videoUrlController,
-                  decoration: const InputDecoration(
-                    labelText: 'Video URL',
-                    hintText: 'https://commondatastorage.googleapis.com/...',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: durationController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Duration (Minutes)'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: orderController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Order Index'),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogCtx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (titleController.text.trim().isEmpty) return;
+      title: lessonToEdit == null ? 'Add Lecture' : 'Edit Lecture',
+      child: Column(
+        children: [
+          AppTextField(controller: titleController, label: 'Lecture Title'),
+          const SizedBox(height: AppSpacing.md),
+          AppTextField(controller: descController, label: 'Description', maxLines: 2),
+          const SizedBox(height: AppSpacing.md),
+          AppTextField(controller: videoUrlController, label: 'Video URL'),
+          const SizedBox(height: AppSpacing.md),
+          AppTextField(controller: durationController, label: 'Duration (Minutes)', keyboardType: TextInputType.number),
+          const SizedBox(height: AppSpacing.md),
+          AppTextField(controller: orderController, label: 'Order Index', keyboardType: TextInputType.number),
+          const SizedBox(height: AppSpacing.lg),
+          AppButton(
+            text: 'Save Lecture',
+            icon: Icons.check_circle_rounded,
+            onPressed: () async {
+              if (titleController.text.trim().isEmpty) return;
 
-                final lesson = LessonModel(
-                  id: lessonToEdit?.id ?? '',
-                  courseId: courseId,
-                  title: titleController.text.trim(),
-                  description: descController.text.trim(),
-                  orderIndex: int.tryParse(orderController.text.trim()) ?? 0,
-                  durationMinutes: int.tryParse(durationController.text.trim()) ?? 10,
-                  videoUrl: videoUrlController.text.trim().isEmpty ? null : videoUrlController.text.trim(),
-                  markdownContent: 'Interactive study material for ${titleController.text.trim()}.',
-                );
+              final lesson = LessonModel(
+                id: lessonToEdit?.id ?? '',
+                courseId: courseId,
+                title: titleController.text.trim(),
+                description: descController.text.trim(),
+                orderIndex: int.tryParse(orderController.text.trim()) ?? 0,
+                durationMinutes: int.tryParse(durationController.text.trim()) ?? 10,
+                videoUrl: videoUrlController.text.trim().isEmpty ? null : videoUrlController.text.trim(),
+                markdownContent: 'Interactive study material for ${titleController.text.trim()}.',
+              );
 
-                final adminVM = context.read<AdminViewModel>();
-                final ok = await adminVM.saveLesson(courseId, lesson);
-                if (context.mounted) {
-                  Navigator.pop(dialogCtx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(ok ? 'Lecture saved!' : 'Failed to save lecture.'),
-                      backgroundColor: ok ? AppSemanticColors.success : AppSemanticColors.error,
-                    ),
-                  );
+              final adminVM = context.read<AdminViewModel>();
+              final ok = await adminVM.saveLesson(courseId, lesson);
+              if (context.mounted) {
+                Navigator.pop(context);
+                if (ok) {
+                  SnackbarUtils.showSuccess(context, 'Lecture saved!');
+                } else {
+                  SnackbarUtils.showError(context, 'Failed to save lecture.');
                 }
-              },
-              child: const Text('Save Lecture'),
-            ),
-          ],
-        );
-      },
+              }
+            },
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final adminVM = context.watch<AdminViewModel>();
 
     return StreamBuilder<List<CourseModel>>(
@@ -778,145 +668,109 @@ class _AdminCourseManagementTab extends StatelessWidget {
         final courses = snapshot.data ?? [];
 
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('Course & Lecture Management'),
+          appBar: AppAppBar(
+            title: 'Course & Lecture Management',
+            showBack: false,
             actions: [
               IconButton(
-                icon: const Icon(Icons.add_circle_outline_rounded, size: 28),
+                icon: const Icon(Icons.add_rounded),
                 tooltip: 'Add Course',
                 onPressed: () => _showCourseDialog(context),
               ),
             ],
           ),
           body: courses.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.school_outlined, size: 64, color: theme.colorScheme.primary),
-                      const SizedBox(height: 16),
-                      Text('No courses available', style: theme.textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      ElevatedButton.icon(
-                        onPressed: () => _showCourseDialog(context),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Create First Course'),
-                      ),
-                    ],
-                  ),
+              ? EmptyState(
+                  icon: Icons.school_outlined,
+                  message: 'No courses available',
+                  buttonText: 'Create First Course',
+                  onButtonPressed: () => _showCourseDialog(context),
                 )
               : ListView.separated(
-                  padding: const EdgeInsets.all(AppTheme.spaceLg),
+                  padding: AppSpacing.screenPadding,
                   itemCount: courses.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: AppTheme.spaceMd),
+                  separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
                   itemBuilder: (context, index) {
                     final course = courses[index];
-                    return Card(
-                      child: ExpansionTile(
-                        leading: CircleAvatar(
-                          backgroundColor: theme.colorScheme.primaryContainer,
-                          child: Icon(Icons.menu_book_rounded, color: theme.colorScheme.primary),
+                    return SwipeActionTile(
+                      onEdit: () => _showCourseDialog(context, courseToEdit: course),
+                      onDelete: () async {
+                        await adminVM.deleteCourse(course.id);
+                      },
+                      deleteTitle: 'Delete Course',
+                      deleteMessage: 'Are you sure you want to delete "${course.title}"?',
+                      child: Material(
+                        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                        clipBehavior: Clip.antiAlias,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: AppRadius.radiusLg,
+                          side: BorderSide(
+                            color: isDark ? AppColors.outlineDark : AppColors.outlineLight,
+                          ),
                         ),
-                        title: Text(course.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('${course.category} • ${course.level} • ${course.totalLessons} Lessons'),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
+                        child: ExpansionTile(
+                          leading: CircleAvatar(
+                            backgroundImage: NetworkImage(course.thumbnailUrl),
+                          ),
+                          title: Text(course.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text('${course.category} • ${course.level} • ${course.totalLessons} Lessons'),
                           children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit_outlined, color: Colors.blue),
-                              onPressed: () => _showCourseDialog(context, courseToEdit: course),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
-                              onPressed: () async {
-                                final confirm = await showDialog<bool>(
-                                  context: context,
-                                  builder: (ctx) => AlertDialog(
-                                    title: const Text('Delete Course'),
-                                    content: Text('Are you sure you want to delete "${course.title}"?'),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(ctx, false),
-                                        child: const Text('Cancel'),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('Lectures List', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  Row(
+                                    children: [
+                                      TextButton.icon(
+                                        onPressed: () => context.push('/admin/course/${course.id}/quizzes'),
+                                        icon: const Icon(Icons.quiz_rounded, size: 16),
+                                        label: const Text('Quizzes'),
                                       ),
-                                      ElevatedButton(
-                                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                        onPressed: () => Navigator.pop(ctx, true),
-                                        child: const Text('Delete'),
+                                      TextButton.icon(
+                                        onPressed: () => _showLectureDialog(context, course.id),
+                                        icon: const Icon(Icons.add_rounded, size: 18),
+                                        label: const Text('Add Lecture'),
                                       ),
                                     ],
                                   ),
-                                );
-                                if (confirm == true && context.mounted) {
-                                  await adminVM.deleteCourse(course.id);
+                                ],
+                              ),
+                            ),
+                            StreamBuilder<List<LessonModel>>(
+                              stream: adminVM.streamLessons(course.id),
+                              builder: (context, lessonSnap) {
+                                final lessons = lessonSnap.data ?? [];
+                                if (lessons.isEmpty) {
+                                  return const Padding(
+                                    padding: EdgeInsets.all(12.0),
+                                    child: Text('No lectures added yet.', style: TextStyle(color: Colors.grey)),
+                                  );
                                 }
+                                return Column(
+                                  children: lessons.map((lesson) {
+                                    return SwipeActionTile(
+                                      onEdit: () => _showLectureDialog(context, course.id, lessonToEdit: lesson),
+                                      onDelete: () => adminVM.deleteLesson(course.id, lesson.id),
+                                      deleteTitle: 'Delete Lecture',
+                                      deleteMessage: 'Are you sure you want to delete "${lesson.title}"?',
+                                      child: ListTile(
+                                        dense: true,
+                                        leading: CircleAvatar(
+                                          radius: 12,
+                                          child: Text('${lesson.orderIndex + 1}', style: const TextStyle(fontSize: 10)),
+                                        ),
+                                        title: Text(lesson.title),
+                                        subtitle: Text('${lesson.durationMinutes} mins ${lesson.videoUrl != null ? "• Video" : ""}'),
+                                      ),
+                                    );
+                                  }).toList(),
+                                );
                               },
                             ),
                           ],
                         ),
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text('Lectures List', style: TextStyle(fontWeight: FontWeight.bold)),
-                                Row(
-                                  children: [
-                                    TextButton.icon(
-                                      onPressed: () => context.push('/admin/course/${course.id}/quizzes'),
-                                      icon: const Icon(Icons.quiz_rounded, size: 16),
-                                      label: const Text('Quizzes'),
-                                    ),
-                                    TextButton.icon(
-                                      onPressed: () => _showLectureDialog(context, course.id),
-                                      icon: const Icon(Icons.add, size: 18),
-                                      label: const Text('Add Lecture'),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          StreamBuilder<List<LessonModel>>(
-                            stream: adminVM.streamLessons(course.id),
-                            builder: (context, lessonSnap) {
-                              final lessons = lessonSnap.data ?? [];
-                              if (lessons.isEmpty) {
-                                return const Padding(
-                                  padding: EdgeInsets.all(12.0),
-                                  child: Text('No lectures added yet.', style: TextStyle(color: Colors.grey)),
-                                );
-                              }
-                              return Column(
-                                children: lessons.map((lesson) {
-                                  return ListTile(
-                                    dense: true,
-                                    leading: CircleAvatar(
-                                      radius: 12,
-                                      child: Text('${lesson.orderIndex + 1}', style: const TextStyle(fontSize: 10)),
-                                    ),
-                                    title: Text(lesson.title),
-                                    subtitle: Text('${lesson.durationMinutes} mins ${lesson.videoUrl != null ? "• Has Video" : ""}'),
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(Icons.edit, size: 18),
-                                          onPressed: () => _showLectureDialog(context, course.id, lessonToEdit: lesson),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                                          onPressed: () => adminVM.deleteLesson(course.id, lesson.id),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }).toList(),
-                              );
-                            },
-                          ),
-                        ],
                       ),
                     );
                   },
@@ -949,74 +803,63 @@ class _AdminStudentManagementTabState extends State<_AdminStudentManagementTab> 
   void _showAssignCourseDialog(BuildContext context, UserModel student) {
     final adminVM = context.read<AdminViewModel>();
 
-    showDialog(
+    AppBottomSheet.show(
       context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: Text('Course Enrollments for ${student.displayName}'),
-          content: StreamBuilder<List<CourseModel>>(
-            stream: adminVM.coursesStream,
-            builder: (context, snapshot) {
-              final courses = snapshot.data ?? [];
-              if (courses.isEmpty) {
-                return const Text('No courses available.');
-              }
-              return SizedBox(
-                width: double.maxFinite,
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: courses.length,
-                  itemBuilder: (context, idx) {
-                    final course = courses[idx];
-                    return StreamBuilder<List<EnrollmentModel>>(
-                      stream: adminVM.streamStudentEnrollments(student.uid),
-                      builder: (context, enrollSnap) {
-                        final enrollments = enrollSnap.data ?? [];
-                        final enrollment = enrollments.where((e) => e.courseId == course.id).firstOrNull;
-                        final isEnrolled = enrollment != null;
+      title: 'Enrollments for ${student.displayName}',
+      child: StreamBuilder<List<CourseModel>>(
+        stream: adminVM.coursesStream,
+        builder: (context, snapshot) {
+          final courses = snapshot.data ?? [];
+          if (courses.isEmpty) {
+            return const Text('No courses available.');
+          }
+          return ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: courses.length,
+            itemBuilder: (context, idx) {
+              final course = courses[idx];
+              return StreamBuilder<List<EnrollmentModel>>(
+                stream: adminVM.streamStudentEnrollments(student.uid),
+                builder: (context, enrollSnap) {
+                  final enrollments = enrollSnap.data ?? [];
+                  final enrollment = enrollments.where((e) => e.courseId == course.id).firstOrNull;
+                  final isEnrolled = enrollment != null;
 
-                        return ListTile(
-                          title: Text(course.title),
-                          subtitle: Text(
-                            isEnrolled
-                                ? 'Progress: ${(enrollment.progressPercent * 100).toInt()}% • Completed ${enrollment.completedLessonIds.length}/${course.totalLessons} lessons'
-                                : 'Not enrolled',
+                  return ListTile(
+                    title: Text(course.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text(
+                      isEnrolled
+                          ? 'Progress: ${(enrollment.progressPercent * 100).toInt()}% • ${enrollment.completedLessonIds.length}/${course.totalLessons} lessons'
+                          : 'Not enrolled',
+                    ),
+                    trailing: isEnrolled
+                        ? OutlinedButton(
+                            onPressed: () async {
+                              await adminVM.removeCourseAssignment(student.uid, course.id);
+                            },
+                            child: const Text('Revoke'),
+                          )
+                        : ElevatedButton(
+                            onPressed: () async {
+                              await adminVM.assignCourse(student.uid, course.id);
+                            },
+                            child: const Text('Assign'),
                           ),
-                          trailing: isEnrolled
-                              ? ElevatedButton(
-                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade400),
-                                  onPressed: () async {
-                                    await adminVM.removeCourseAssignment(student.uid, course.id);
-                                  },
-                                  child: const Text('Revoke'),
-                                )
-                              : ElevatedButton(
-                                  onPressed: () async {
-                                    await adminVM.assignCourse(student.uid, course.id);
-                                  },
-                                  child: const Text('Assign'),
-                                ),
-                        );
-                      },
-                    );
-                  },
-                ),
+                  );
+                },
               );
             },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Close'),
-            ),
-          ],
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final adminVM = context.watch<AdminViewModel>();
 
     return StreamBuilder<List<UserModel>>(
@@ -1031,89 +874,92 @@ class _AdminStudentManagementTabState extends State<_AdminStudentManagementTab> 
         }).toList();
 
         return Scaffold(
-          appBar: AppBar(
-            title: Text('Registered Students (${allStudents.length})'),
+          appBar: AppAppBar(
+            title: 'Registered Students (${allStudents.length})',
+            showBack: false,
           ),
           body: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.all(AppTheme.spaceLg),
-                child: TextField(
+                padding: AppSpacing.screenPadding,
+                child: AppTextField(
                   controller: _searchController,
+                  label: '',
+                  hint: 'Search student by name or email...',
+                  prefixIcon: Icons.search_rounded,
                   onChanged: (val) => setState(() => _searchQuery = val),
-                  decoration: InputDecoration(
-                    hintText: 'Search student by name or email...',
-                    prefixIcon: const Icon(Icons.search_rounded),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear_rounded),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _searchQuery = '');
-                            },
-                          )
-                        : null,
-                  ),
                 ),
               ),
               Expanded(
                 child: filteredStudents.isEmpty
-                    ? const Center(child: Text('No students match your query.'))
+                    ? const EmptyState(
+                        icon: Icons.person_off_rounded,
+                        message: 'No students match your query.',
+                      )
                     : ListView.separated(
-                        padding: const EdgeInsets.symmetric(horizontal: AppTheme.spaceLg),
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                         itemCount: filteredStudents.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: AppTheme.spaceMd),
+                        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.md),
                         itemBuilder: (context, index) {
                           final student = filteredStudents[index];
-                          return Card(
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                child: Text(student.displayName.isNotEmpty ? student.displayName[0].toUpperCase() : 'S'),
+                          return SwipeActionTile(
+                            onEdit: () => _showAssignCourseDialog(context, student),
+                            onDelete: () async {
+                              await adminVM.deleteStudent(student.uid);
+                            },
+                            deleteTitle: 'Delete Student',
+                            deleteMessage: 'Are you sure you want to delete ${student.displayName}?',
+                            child: Material(
+                              color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                              clipBehavior: Clip.antiAlias,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: AppRadius.radiusLg,
+                                side: BorderSide(
+                                  color: isDark ? AppColors.outlineDark : AppColors.outlineLight,
+                                ),
                               ),
-                              title: Row(
-                                children: [
-                                  Text(student.displayName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                  const SizedBox(width: 8),
-                                  Chip(
-                                    label: Text('${student.totalXp} XP'),
-                                    padding: EdgeInsets.zero,
-                                    visualDensity: VisualDensity.compact,
-                                    backgroundColor: AppSemanticColors.xpGold.withValues(alpha: 0.2),
+                              child: Padding(
+                                padding: AppSpacing.cardPadding,
+                                child: ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: AppAvatar(name: student.displayName),
+                                  title: Row(
+                                    children: [
+                                      Text(student.displayName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                      const SizedBox(width: 8),
+                                      AppBadge(
+                                        label: '${student.totalXp} XP',
+                                        backgroundColor: AppColors.xpGold.withValues(alpha: 0.15),
+                                        textColor: AppColors.xpGold,
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                              subtitle: Text('${student.email}\nStreak: ${student.streakDays} days'),
-                              isThreeLine: true,
-                              trailing: PopupMenuButton<String>(
-                                onSelected: (val) async {
-                                  if (val == 'assign') {
-                                    _showAssignCourseDialog(context, student);
-                                  } else if (val == 'delete') {
-                                    await adminVM.deleteStudent(student.uid);
-                                  }
-                                },
-                                itemBuilder: (context) => [
-                                  const PopupMenuItem(
-                                    value: 'assign',
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.assignment_add, size: 20),
-                                        SizedBox(width: 8),
-                                        Text('Manage Enrollments'),
-                                      ],
-                                    ),
+                                  subtitle: Text('${student.email}\nStreak: ${student.streakDays} days'),
+                                  isThreeLine: true,
+                                  trailing: IconButton(
+                                    icon: const Icon(Icons.more_vert_rounded),
+                                    onPressed: () {
+                                      ActionSheet.show(
+                                        context,
+                                        actions: [
+                                          ActionSheetItem(
+                                            icon: Icons.assignment_add,
+                                            title: 'Manage Enrollments',
+                                            onTap: () => _showAssignCourseDialog(context, student),
+                                          ),
+                                          ActionSheetItem(
+                                            icon: Icons.delete_outline_rounded,
+                                            title: 'Delete Record',
+                                            isDanger: true,
+                                            onTap: () async {
+                                              await adminVM.deleteStudent(student.uid);
+                                            },
+                                          ),
+                                        ],
+                                      );
+                                    },
                                   ),
-                                  const PopupMenuItem(
-                                    value: 'delete',
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                                        SizedBox(width: 8),
-                                        Text('Delete Student Record', style: TextStyle(color: Colors.red)),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
                             ),
                           );
@@ -1136,6 +982,7 @@ class _AdminAnalyticsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final homeViewModel = context.watch<HomeViewModel>();
 
     return StreamBuilder<List<CourseModel>>(
@@ -1144,105 +991,113 @@ class _AdminAnalyticsTab extends StatelessWidget {
         final courses = snapshot.data ?? [];
         final totalLessons = courses.fold<int>(0, (sum, c) => sum + c.totalLessons);
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(AppTheme.spaceLg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Reports & Analytics', style: theme.textTheme.headlineLarge),
-              const SizedBox(height: AppTheme.space2xs),
-              Text(
-                'Comprehensive overview of platform learning metrics and course activity',
-                style: theme.textTheme.bodySmall,
-              ),
-              const SizedBox(height: AppTheme.spaceLg),
-
-              GlassContainer(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Course Catalog Coverage', style: theme.textTheme.titleMedium),
-                        Text('${courses.length} Active Courses', style: const TextStyle(fontWeight: FontWeight.w700)),
-                      ],
-                    ),
-                    const SizedBox(height: AppTheme.spaceSm),
-                    LinearProgressIndicator(
-                      value: courses.isEmpty ? 0.0 : (courses.length / 10).clamp(0.0, 1.0),
-                      minHeight: 10,
-                      borderRadius: BorderRadius.circular(5),
-                      backgroundColor: theme.colorScheme.outline.withValues(alpha: 0.2),
-                      valueColor: AlwaysStoppedAnimation(theme.colorScheme.primary),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppTheme.spaceXl),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _MetricCard(
-                      title: 'Total Lessons',
-                      value: '$totalLessons',
-                      icon: Icons.menu_book_rounded,
-                      color: theme.colorScheme.primary,
+        return Scaffold(
+          appBar: const AppAppBar(title: 'Reports & Analytics', showBack: false),
+          body: SingleChildScrollView(
+            padding: AppSpacing.screenPadding,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: AppSpacing.cardPadding,
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                    borderRadius: AppRadius.radiusLg,
+                    border: Border.all(
+                      color: isDark ? AppColors.outlineDark : AppColors.outlineLight,
                     ),
                   ),
-                  const SizedBox(width: AppTheme.spaceMd),
-                  Expanded(
-                    child: _MetricCard(
-                      title: 'Categories',
-                      value: '${courses.map((c) => c.category).toSet().length}',
-                      icon: Icons.category_rounded,
-                      color: AppSemanticColors.xpGold,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppTheme.spaceXl),
-
-              Text('Weekly Platform Activity Trends', style: theme.textTheme.titleLarge),
-              const SizedBox(height: AppTheme.spaceMd),
-              SizedBox(
-                height: 200,
-                child: BarChart(
-                  BarChartData(
-                    alignment: BarChartAlignment.spaceAround,
-                    maxY: 100,
-                    barTouchData: BarTouchData(enabled: true),
-                    titlesData: FlTitlesData(
-                      show: true,
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          getTitlesWidget: (val, meta) {
-                            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                            return Text(days[val.toInt() % 7], style: const TextStyle(fontSize: 11));
-                          },
-                        ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Course Catalog Coverage', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                          Text('${courses.length} Active Courses', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        ],
                       ),
-                      leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    ),
-                    borderData: FlBorderData(show: false),
-                    gridData: const FlGridData(show: false),
-                    barGroups: [
-                      _makeGroupData(0, 45, theme.colorScheme.primary),
-                      _makeGroupData(1, 60, theme.colorScheme.primary),
-                      _makeGroupData(2, 80, theme.colorScheme.primary),
-                      _makeGroupData(3, 75, theme.colorScheme.primary),
-                      _makeGroupData(4, 90, theme.colorScheme.primary),
-                      _makeGroupData(5, 50, theme.colorScheme.primary),
-                      _makeGroupData(6, 65, theme.colorScheme.primary),
+                      const SizedBox(height: AppSpacing.sm),
+                      ProgressBar(
+                        percent: courses.isEmpty ? 0.0 : (courses.length / 10).clamp(0.0, 1.0),
+                        height: 8,
+                      ),
                     ],
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: AppSpacing.xl),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: StatCard(
+                        title: 'Total Lessons',
+                        value: '$totalLessons',
+                        icon: Icons.menu_book_rounded,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: StatCard(
+                        title: 'Categories',
+                        value: '${courses.map((c) => c.category).toSet().length}',
+                        icon: Icons.category_rounded,
+                        color: AppColors.xpGold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xl),
+
+                const SectionHeader(title: 'Weekly Platform Activity Trends'),
+                const SizedBox(height: AppSpacing.md),
+                Container(
+                  height: 200,
+                  padding: AppSpacing.cardPadding,
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                    borderRadius: AppRadius.radiusLg,
+                    border: Border.all(
+                      color: isDark ? AppColors.outlineDark : AppColors.outlineLight,
+                    ),
+                  ),
+                  child: BarChart(
+                    BarChartData(
+                      alignment: BarChartAlignment.spaceAround,
+                      maxY: 100,
+                      barTouchData: BarTouchData(enabled: true),
+                      titlesData: FlTitlesData(
+                        show: true,
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            getTitlesWidget: (val, meta) {
+                              const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                              return Text(days[val.toInt() % 7], style: const TextStyle(fontSize: 11));
+                            },
+                          ),
+                        ),
+                        leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      ),
+                      borderData: FlBorderData(show: false),
+                      gridData: const FlGridData(show: false),
+                      barGroups: [
+                        _makeGroupData(0, 45, theme.colorScheme.primary),
+                        _makeGroupData(1, 60, theme.colorScheme.primary),
+                        _makeGroupData(2, 80, theme.colorScheme.primary),
+                        _makeGroupData(3, 75, theme.colorScheme.primary),
+                        _makeGroupData(4, 90, theme.colorScheme.primary),
+                        _makeGroupData(5, 50, theme.colorScheme.primary),
+                        _makeGroupData(6, 65, theme.colorScheme.primary),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -1272,197 +1127,157 @@ class _AdminProfileTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final user = context.watch<AuthViewModel>().user;
     final themeVM = context.watch<ThemeViewModel>();
     final profileVM = context.watch<ProfileViewModel>();
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppTheme.spaceLg),
-      child: Column(
-        children: [
-          Center(
-            child: Stack(
-              children: [
-                CircleAvatar(
-                  radius: 50,
-                  backgroundImage: user?.photoUrl != null
-                      ? NetworkImage(user!.photoUrl!)
-                      : null,
-                  child: user?.photoUrl == null
-                      ? const Icon(Icons.admin_panel_settings_rounded, size: 50)
-                      : null,
-                ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: CircleAvatar(
-                    radius: 18,
-                    backgroundColor: theme.colorScheme.primary,
-                    child: const Icon(Icons.verified_user_rounded, size: 18, color: Colors.white),
+    return Scaffold(
+      appBar: const AppAppBar(title: 'Admin Profile', showBack: false),
+      body: SingleChildScrollView(
+        padding: AppSpacing.screenPadding,
+        child: Column(
+          children: [
+            Center(
+              child: Stack(
+                children: [
+                  AppAvatar(
+                    name: user?.displayName ?? 'Admin',
+                    radius: 48,
+                    imageUrl: user?.photoUrl,
                   ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.verified_user_rounded, size: 16, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(user?.displayName ?? 'Admin', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(width: AppSpacing.sm),
+                const AppBadge(
+                  label: 'ADMIN',
+                  backgroundColor: AppColors.error,
+                  textColor: Colors.white,
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: AppTheme.spaceMd),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(user?.displayName ?? 'Admin', style: theme.textTheme.headlineMedium),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Text(
-                  'ADMIN',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
+            Text(user?.email ?? '', style: theme.textTheme.bodySmall),
+            const SizedBox(height: AppSpacing.xl),
+
+            Container(
+              padding: AppSpacing.cardPadding,
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                borderRadius: AppRadius.radiusLg,
+                border: Border.all(
+                  color: isDark ? AppColors.outlineDark : AppColors.outlineLight,
                 ),
               ),
-            ],
-          ),
-          Text(user?.email ?? '', style: theme.textTheme.bodySmall),
-          const SizedBox(height: AppTheme.space2xl),
-
-          GlassContainer(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Accent Color Palette', style: theme.textTheme.titleMedium),
-                const SizedBox(height: AppTheme.spaceSm),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: AppAccentPalette.values.map((palette) {
-                    final isSelected = palette == themeVM.accentPalette;
-                    return GestureDetector(
-                      onTap: () => themeVM.setAccentPalette(palette),
-                      child: Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: palette.primary,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: isSelected ? Colors.white : Colors.transparent,
-                            width: 3,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SectionHeader(title: 'Accent Color Palette'),
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: AppAccentPalette.values.map((palette) {
+                      final isSelected = palette == themeVM.accentPalette;
+                      return GestureDetector(
+                        onTap: () => themeVM.setAccentPalette(palette),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: palette.primary,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected ? Colors.white : Colors.transparent,
+                              width: 3,
+                            ),
+                            boxShadow: isSelected
+                                ? [BoxShadow(color: palette.primary.withValues(alpha: 0.5), blurRadius: 10)]
+                                : null,
                           ),
-                          boxShadow: isSelected
-                              ? [BoxShadow(color: palette.primary, blurRadius: 8)]
+                          child: isSelected
+                              ? const Icon(Icons.check_rounded, color: Colors.white, size: 20)
                               : null,
                         ),
-                        child: isSelected
-                            ? const Icon(Icons.check, color: Colors.white, size: 20)
-                            : null,
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: AppTheme.spaceLg),
+            const SizedBox(height: AppSpacing.md),
 
-          GlassContainer(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Appearance Mode', style: theme.textTheme.titleMedium),
-                      const SizedBox(height: 2),
-                      Text('Switch between light, dark or system theme', style: theme.textTheme.bodySmall),
+            Container(
+              padding: AppSpacing.cardPadding,
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                borderRadius: AppRadius.radiusLg,
+                border: Border.all(
+                  color: isDark ? AppColors.outlineDark : AppColors.outlineLight,
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Appearance Mode', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                  DropdownButton<ThemeMode>(
+                    value: themeVM.themeMode,
+                    onChanged: (mode) {
+                      if (mode != null) {
+                        themeVM.setThemeMode(mode);
+                      }
+                    },
+                    items: const [
+                      DropdownMenuItem(value: ThemeMode.system, child: Text('System')),
+                      DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
+                      DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
                     ],
                   ),
-                ),
-                DropdownButton<ThemeMode>(
-                  value: themeVM.themeMode,
-                  onChanged: (mode) {
-                    if (mode != null) {
-                      themeVM.setThemeMode(mode);
-                    }
-                  },
-                  items: const [
-                    DropdownMenuItem(value: ThemeMode.system, child: Text('System')),
-                    DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
-                    DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppTheme.space2xl),
-
-          OutlinedButton.icon(
-            onPressed: () async {
-              await profileVM.signOut();
-              if (context.mounted) {
-                context.read<AuthViewModel>().signOut();
-                context.go('/auth');
-              }
-            },
-            icon: const Icon(Icons.logout_rounded),
-            label: const Text('Sign Out'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MetricCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _MetricCard({
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppTheme.spaceSm),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-        border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Icon(icon, color: color, size: 24),
-              Text(
-                value,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                ],
               ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+            ),
+            const SizedBox(height: AppSpacing.xxl),
+
+            AppButton(
+              text: 'Sign Out',
+              icon: Icons.logout_rounded,
+              variant: AppButtonVariant.danger,
+              onPressed: () async {
+                final confirm = await DialogUtils.showConfirm(
+                  context,
+                  title: 'Sign Out',
+                  message: 'Are you sure you want to sign out?',
+                  confirmText: 'Sign Out',
+                  isDanger: true,
+                );
+                if (confirm == true && context.mounted) {
+                  await profileVM.signOut();
+                  if (context.mounted) {
+                    context.read<AuthViewModel>().signOut();
+                    context.go('/auth');
+                  }
+                }
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

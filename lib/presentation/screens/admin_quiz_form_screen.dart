@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_theme.dart';
+import '../../core/constants/app_spacing.dart';
+import '../../core/utils/snackbar_utils.dart';
 import '../../data/models/quiz_model.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/course_repository.dart';
@@ -85,7 +86,7 @@ class _AdminQuizFormScreenState extends State<AdminQuizFormScreen> {
       context.pop();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      SnackbarUtils.showError(context, 'Error: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -96,31 +97,32 @@ class _AdminQuizFormScreenState extends State<AdminQuizFormScreen> {
     return Scaffold(
       appBar: AppAppBar(title: widget.quizId == null ? 'Create Quiz' : 'Edit Quiz'),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppTheme.spaceLg),
+        padding: AppSpacing.screenPadding,
         child: Form(
           key: _formKey,
           child: Column(
             children: [
               AppTextField(controller: _titleController, label: 'Quiz Title', validator: (v) => v!.isEmpty ? 'Required' : null),
-              const SizedBox(height: AppTheme.spaceMd),
+              const SizedBox(height: AppSpacing.md),
               AppTextField(controller: _descController, label: 'Description'),
-              const SizedBox(height: AppTheme.spaceMd),
+              const SizedBox(height: AppSpacing.md),
               AppTextField(controller: _instructionsController, label: 'Instructions'),
-              const SizedBox(height: AppTheme.spaceMd),
+              const SizedBox(height: AppSpacing.md),
               AppTextField(controller: _passingMarksController, label: 'Passing Marks', keyboardType: TextInputType.number),
-              const SizedBox(height: AppTheme.spaceMd),
+              const SizedBox(height: AppSpacing.md),
               AppTextField(controller: _timeLimitController, label: 'Time Limit (Minutes)', keyboardType: TextInputType.number),
-              const SizedBox(height: AppTheme.spaceMd),
+              const SizedBox(height: AppSpacing.md),
               AppTextField(controller: _maxAttemptsController, label: 'Max Attempts', keyboardType: TextInputType.number),
-              const SizedBox(height: AppTheme.spaceMd),
+              const SizedBox(height: AppSpacing.md),
               SwitchListTile(
-                title: const Text('Publish Quiz'),
+                title: const Text('Publish Quiz', style: TextStyle(fontWeight: FontWeight.bold)),
                 value: _isPublished,
                 onChanged: (val) => setState(() => _isPublished = val),
               ),
-              const SizedBox(height: AppTheme.spaceXl),
+              const SizedBox(height: AppSpacing.xl),
               AppButton(
                 text: 'Save And Add Questions',
+                icon: Icons.check_circle_rounded,
                 onPressed: _isLoading ? null : () => _saveQuiz(redirectToQuestions: true),
                 isLoading: _isLoading,
               ),

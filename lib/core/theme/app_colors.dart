@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import '../constants/app_colors.dart';
 
 enum AppAccentPalette {
   deepIndigo(
     name: 'Deep Indigo',
     primary: Color(0xFF4F46E5),
-    secondary: Color(0xFF7C3AED),
-    tertiary: Color(0xFF0D9488),
+    secondary: Color(0xFF0EA5E9),
+    tertiary: Color(0xFF8B5CF6),
   ),
   emeraldTeal(
     name: 'Emerald Teal',
@@ -76,14 +77,25 @@ class AppGradients {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
+
+  static LinearGradient heroHeader(Color primary, Color secondary) {
+    return LinearGradient(
+      colors: [
+        primary,
+        secondary,
+      ],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+  }
 }
 
 class AppSemanticColors {
-  static const Color success = Color(0xFF10B981);
-  static const Color warning = Color(0xFFF59E0B);
-  static const Color error = Color(0xFFEF4444);
-  static const Color info = Color(0xFF3B82F6);
+  static const Color success = AppColors.success;
+  static const Color warning = AppColors.warning;
+  static const Color error = AppColors.error;
+  static const Color info = AppColors.info;
 
-  static const Color xpGold = Color(0xFFF59E0B);
-  static const Color streakOrange = Color(0xFFF97316);
+  static const Color xpGold = AppColors.xpGold;
+  static const Color streakOrange = AppColors.streakOrange;
 }

@@ -179,8 +179,8 @@ class QuizModel {
         (e) => e.name == data['gradingMode'],
         orElse: () => GradingMode.auto,
       ),
-      shuffleQuestions: data['shuffleQuestions'] ?? false,
-      shuffleOptions: data['shuffleOptions'] ?? false,
+      shuffleQuestions: data['shuffleQuestions'] ?? true, // Defaults to TRUE for shuffling
+      shuffleOptions: data['shuffleOptions'] ?? true,     // Defaults to TRUE for shuffling
       showResultsMode: ShowResultsMode.values.firstWhere(
         (e) => e.name == data['showResultsMode'],
         orElse: () => ShowResultsMode.immediately,
@@ -233,7 +233,9 @@ class QuizAttemptModel {
   final DateTime? submittedAt;
   final DateTime? deadlineAt;
   final int timeTakenSeconds;
-  final Map<String, dynamic> answers; // questionId -> selectedIndexes[] or text
+  final Map<String, dynamic> answers; // questionId -> original selected indexes
+  final Map<String, List<int>> optionOrder; // questionId -> list of original option indexes in displayed order
+  final List<String> questionOrder; // list of questionIds in displayed order
   final int autoScore;
   final int manualScore;
   final int totalScore;
@@ -259,6 +261,8 @@ class QuizAttemptModel {
     this.deadlineAt,
     this.timeTakenSeconds = 0,
     required this.answers,
+    this.optionOrder = const {},
+    this.questionOrder = const [],
     int? autoScore,
     this.manualScore = 0,
     int? totalScore,
@@ -272,7 +276,6 @@ class QuizAttemptModel {
     this.gradedAt,
     this.isLate = false,
     DateTime? createdAt,
-    // Compatibility parameters
     double? score,
     int? correctCount,
     int? totalQuestions,
@@ -294,6 +297,13 @@ class QuizAttemptModel {
 
   factory QuizAttemptModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> snapshot) {
     final data = snapshot.data() ?? {};
+    
+    // Parse stored optionOrder
+    final rawOptionOrder = (data['optionOrder'] as Map<String, dynamic>?) ?? {};
+    final parsedOptionOrder = rawOptionOrder.map(
+      (k, v) => MapEntry(k, List<int>.from((v as List).map((e) => (e as num).toInt()))),
+    );
+
     return QuizAttemptModel(
       id: snapshot.id,
       courseId: data['courseId'] ?? '',
@@ -308,6 +318,8 @@ class QuizAttemptModel {
       deadlineAt: (data['deadlineAt'] as Timestamp?)?.toDate(),
       timeTakenSeconds: (data['timeTakenSeconds'] as num?)?.toInt() ?? 0,
       answers: Map<String, dynamic>.from(data['answers'] ?? data['selectedAnswers'] ?? {}),
+      optionOrder: parsedOptionOrder,
+      questionOrder: List<String>.from(data['questionOrder'] ?? []),
       autoScore: (data['autoScore'] as num?)?.toInt() ?? (data['correctCount'] as num?)?.toInt() ?? 0,
       manualScore: (data['manualScore'] as num?)?.toInt() ?? 0,
       totalScore: (data['totalScore'] as num?)?.toInt() ?? (data['correctCount'] as num?)?.toInt() ?? 0,
@@ -335,6 +347,8 @@ class QuizAttemptModel {
       'deadlineAt': deadlineAt != null ? Timestamp.fromDate(deadlineAt!) : null,
       'timeTakenSeconds': timeTakenSeconds,
       'answers': answers,
+      'optionOrder': optionOrder,
+      'questionOrder': questionOrder,
       'autoScore': autoScore,
       'manualScore': manualScore,
       'totalScore': totalScore,

@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../../core/theme/app_theme.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_radius.dart';
+import '../../../core/constants/app_spacing.dart';
 import '../../../data/models/course_model.dart';
+import '../../../data/models/enrollment_model.dart';
 import '../../../data/repositories/course_repository.dart';
+import '../common/app_button.dart';
 
 class CourseActionsSection extends StatelessWidget {
   final CourseModel course;
@@ -19,29 +23,41 @@ class CourseActionsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     if (isAdmin) {
-      return Padding(
-        padding: const EdgeInsets.all(AppTheme.spaceLg),
+      return Container(
+        padding: AppSpacing.cardPadding,
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+          borderRadius: AppRadius.radiusLg,
+          border: Border.all(
+            color: isDark ? AppColors.outlineDark : AppColors.outlineLight,
+          ),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Admin Course Controls', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: AppTheme.spaceMd),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 48)),
-              onPressed: () => context.push('/admin/course/${course.id}/quizzes'),
-              icon: const Icon(Icons.quiz_rounded),
-              label: const Text('Manage Quizzes & Questions'),
+            Text(
+              'Admin Course Controls',
+              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: AppTheme.spaceSm),
-            OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(minimumSize: const Size(double.infinity, 48)),
+            const SizedBox(height: AppSpacing.md),
+            AppButton(
+              text: 'Manage Quizzes & Questions',
+              icon: Icons.quiz_rounded,
+              onPressed: () => context.push('/admin/course/${course.id}/quizzes'),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            AppButton(
+              text: course.isPublished ? 'Unpublish Course' : 'Publish Course',
+              icon: course.isPublished ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+              variant: AppButtonVariant.outline,
               onPressed: () async {
                 final courseRepo = context.read<CourseRepository>();
                 await courseRepo.togglePublishCourse(course.id, !course.isPublished);
               },
-              icon: Icon(course.isPublished ? Icons.visibility_off_rounded : Icons.visibility_rounded),
-              label: Text(course.isPublished ? 'Unpublish Course' : 'Publish Course'),
             ),
           ],
         ),
@@ -54,39 +70,70 @@ class CourseActionsSection extends StatelessWidget {
 
     final courseRepo = context.watch<CourseRepository>();
 
-    return Padding(
-      padding: const EdgeInsets.all(AppTheme.spaceXl),
-      child: StreamBuilder<EnrollmentModel?>(
-        stream: courseRepo.streamEnrollment(userId!, course.id),
-        builder: (context, enrollmentSnap) {
-          final enrollment = enrollmentSnap.data;
-          if (enrollment != null) {
-            return Column(
+    return StreamBuilder<EnrollmentModel?>(
+      stream: courseRepo.streamEnrollment(userId!, course.id),
+      builder: (context, enrollmentSnap) {
+        final enrollment = enrollmentSnap.data;
+        if (enrollment != null) {
+          final progressPct = (enrollment.progressPercent * 100).toInt();
+          return Container(
+            padding: AppSpacing.cardPadding,
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+              borderRadius: AppRadius.radiusLg,
+              border: Border.all(
+                color: isDark ? AppColors.outlineDark : AppColors.outlineLight,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
-                  onPressed: () => context.push('/quiz/${course.id}'),
-                  icon: const Icon(Icons.quiz_rounded),
-                  label: const Text('Take Assessment Quiz'),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.check_circle_rounded, color: AppColors.success, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Enrolled',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.success,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      '$progressPct% Completed',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'Enrolled! Progress: ${(enrollment.progressPercent * 100).toInt()}%',
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
-                ),
+                if (course.quizCount > 0) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  AppButton(
+                    text: 'Take Assessment Quiz',
+                    icon: Icons.quiz_rounded,
+                    onPressed: () => context.push('/quiz/${course.id}'),
+                  ),
+                ],
               ],
-            );
-          }
-
-          return ElevatedButton(
-            style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
-            onPressed: () async {
-              await courseRepo.enrollInCourse(userId!, course.id);
-            },
-            child: const Text('Enroll Now'),
+            ),
           );
-        },
-      ),
+        }
+
+        return AppButton(
+          text: 'Enroll Now',
+          icon: Icons.school_rounded,
+          onPressed: () async {
+            await courseRepo.enrollInCourse(userId!, course.id);
+          },
+        );
+      },
     );
   }
 }

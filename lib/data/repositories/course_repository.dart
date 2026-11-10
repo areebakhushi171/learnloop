@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import '../../domain/progress_calculator.dart';
 import '../models/category_model.dart';
 import '../models/course_model.dart';
 import '../models/lesson_model.dart';
@@ -45,6 +46,7 @@ abstract class CourseRepository {
   Stream<List<EnrollmentModel>> streamUserEnrollments(String userId);
   Future<void> enrollInCourse(String userId, String courseId);
   Future<void> markLessonComplete(String userId, String courseId, String lessonId, int totalLessons, [int lessonDurationMinutes = 10]);
+  Future<void> recalculateAndSaveProgress(String userId, String courseId);
 
   // Quiz Attempts
   Future<void> recordQuizAttempt(String userId, QuizAttemptModel attempt);
@@ -119,22 +121,18 @@ class FirestoreCourseRepository implements CourseRepository {
     String? level,
     String? category,
   }) {
-    // Single collection snapshot without multiple where or orderBy to avoid composite index requirements
     return _firestore.collection('courses').snapshots().map((snapshot) {
       var list = snapshot.docs.map((doc) => CourseModel.fromFirestore(doc)).toList();
 
-      // Filter category in Dart
       final activeCat = categoryId ?? category;
       if (activeCat != null && activeCat.isNotEmpty && activeCat != 'All') {
         list = list.where((c) => c.categoryId == activeCat || c.category == activeCat).toList();
       }
 
-      // Filter level in Dart
       if (level != null && level.isNotEmpty && level != 'All') {
         list = list.where((c) => c.level.toLowerCase() == level.toLowerCase()).toList();
       }
 
-      // Filter search query in Dart
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final queryLower = searchQuery.toLowerCase().trim();
         list = list.where((c) =>
@@ -143,7 +141,6 @@ class FirestoreCourseRepository implements CourseRepository {
             c.instructorName.toLowerCase().contains(queryLower)).toList();
       }
 
-      // Sort in Dart by createdAt descending
       list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return list;
     });
@@ -280,7 +277,6 @@ class FirestoreCourseRepository implements CourseRepository {
 
   @override
   Future<QuizModel?> getQuizForCourse(String courseId) async {
-    // Single collection query without multiple where filters to avoid composite indexes
     final snap = await _firestore
         .collection('courses')
         .doc(courseId)
@@ -525,6 +521,8 @@ class FirestoreCourseRepository implements CourseRepository {
         tx.update(courseRef, {'enrolledCount': currentEnrolled + 1});
       }
     });
+
+    await recalculateAndSaveProgress(userId, courseId);
   }
 
   @override
@@ -552,16 +550,11 @@ class FirestoreCourseRepository implements CourseRepository {
         completed.add(lessonId);
       }
 
-      final double progress = totalLessons > 0 ? (completed.length / totalLessons).clamp(0.0, 1.0) : 1.0;
-      final bool isCompleted = progress >= 1.0;
-
       tx.set(enrollmentRef, {
         'userId': userId,
         'completedLessonIds': completed,
-        'progressPercent': progress,
         'lastLessonId': lessonId,
         'lastAccessedAt': Timestamp.fromDate(DateTime.now()),
-        'isCompleted': isCompleted,
       }, SetOptions(merge: true));
 
       final studyLogSnap = await tx.get(studyLogRef);
@@ -589,6 +582,74 @@ class FirestoreCourseRepository implements CourseRepository {
         });
       }
     });
+
+    await recalculateAndSaveProgress(userId, courseId);
+  }
+
+  @override
+  Future<void> recalculateAndSaveProgress(String userId, String courseId) async {
+    // 1. Fetch Lessons
+    final lessonsSnap = await _firestore.collection('courses').doc(courseId).collection('lessons').get();
+    final totalLessons = lessonsSnap.docs.length;
+
+    // 2. Fetch Quizzes (Published with questionCount > 0)
+    final quizzesSnap = await _firestore.collection('courses').doc(courseId).collection('quizzes').get();
+    final publishedQuizzes = quizzesSnap.docs
+        .map((d) => QuizModel.fromFirestore(d))
+        .where((q) => q.isPublished && q.questionCount > 0)
+        .toList();
+
+    // 3. Fetch User Attempts for this Course
+    final attemptsSnap = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('quizAttempts')
+        .get();
+
+    final attempts = attemptsSnap.docs
+        .map((d) => QuizAttemptModel.fromFirestore(d))
+        .where((a) => a.courseId == courseId)
+        .toList();
+
+    // Map best attempt percentage per published quiz
+    final List<double> quizBestPercentages = [];
+    for (var quiz in publishedQuizzes) {
+      final quizAttempts = attempts.where((a) => a.quizId == quiz.id).toList();
+      if (quizAttempts.isNotEmpty) {
+        quizAttempts.sort((a, b) => b.score.compareTo(a.score));
+        quizBestPercentages.add(quizAttempts.first.score);
+      } else {
+        quizBestPercentages.add(0.0);
+      }
+    }
+
+    // 4. Fetch Enrollment Completed Lessons
+    final enrollmentRef = _firestore.collection('users').doc(userId).collection('enrollments').doc(courseId);
+    final enrollmentSnap = await enrollmentRef.get();
+    int completedLessonsCount = 0;
+    if (enrollmentSnap.exists) {
+      final data = enrollmentSnap.data() ?? {};
+      final completedList = List<String>.from(data['completedLessonIds'] ?? []);
+      completedLessonsCount = completedList.length;
+    }
+
+    // 5. Calculate via ProgressCalculator
+    final result = ProgressCalculator.calculate(
+      totalLessons: totalLessons,
+      completedLessonsCount: completedLessonsCount,
+      quizBestPercentages: quizBestPercentages,
+      totalPublishedQuizzesCount: publishedQuizzes.length,
+    );
+
+    // 6. Save updated progress to Enrollment Document
+    await enrollmentRef.set({
+      'userId': userId,
+      'progressPercent': result.progressPercent,
+      'lessonPercent': result.lessonPercent,
+      'quizPercent': result.quizPercent,
+      'isCompleted': result.isCompleted,
+      'lastAccessedAt': Timestamp.fromDate(DateTime.now()),
+    }, SetOptions(merge: true));
   }
 
   @override
@@ -614,6 +675,9 @@ class FirestoreCourseRepository implements CourseRepository {
         }
       }
     });
+
+    // Automatically recalculate course progress after quiz attempt
+    await recalculateAndSaveProgress(userId, attempt.courseId);
   }
 
   @override

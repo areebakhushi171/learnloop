@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_theme.dart';
-import '../../data/models/course_model.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_radius.dart';
+import '../../core/constants/app_spacing.dart';
+import '../../data/models/enrollment_model.dart';
 import '../../data/models/quiz_model.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/course_repository.dart';
 import '../widgets/common/app_app_bar.dart';
+import '../widgets/data_display/quiz_card.dart';
+import '../widgets/states/empty_state.dart';
 
 class StudentQuizListScreen extends StatelessWidget {
   const StudentQuizListScreen({super.key});
@@ -19,8 +22,13 @@ class StudentQuizListScreen extends StatelessWidget {
 
     if (userId == null) {
       return const Scaffold(
-        appBar: AppAppBar(title: 'Assessments'),
-        body: Center(child: Text('Please log in to view quizzes.')),
+        appBar: AppAppBar(title: 'Assessments', showBack: false),
+        body: Center(
+          child: EmptyState(
+            icon: Icons.lock_outline_rounded,
+            message: 'Please log in to view quizzes.',
+          ),
+        ),
       );
     }
 
@@ -31,11 +39,17 @@ class StudentQuizListScreen extends StatelessWidget {
         builder: (context, enrollmentSnap) {
           final enrollments = enrollmentSnap.data ?? [];
           if (enrollments.isEmpty) {
-            return const Center(child: Text('You are not enrolled in any courses yet.'));
+            return const Center(
+              child: EmptyState(
+                icon: Icons.assignment_outlined,
+                message: 'You are not enrolled in any courses yet.',
+              ),
+            );
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.all(AppTheme.spaceLg),
+            key: const PageStorageKey('student_quiz_list_scroll_key'),
+            padding: AppSpacing.screenPadding,
             itemCount: enrollments.length,
             itemBuilder: (context, index) {
               final enrollment = enrollments[index];
@@ -48,16 +62,10 @@ class StudentQuizListScreen extends StatelessWidget {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      ...quizzes.map((quiz) => Card(
-                            margin: const EdgeInsets.only(bottom: AppTheme.spaceMd),
-                            child: ListTile(
-                              title: Text(quiz.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text('${quiz.questionCount} Questions • ${quiz.totalMarks} Marks • ${quiz.timeLimitMinutes} mins'),
-                              trailing: ElevatedButton(
-                                onPressed: () => context.push('/quiz/${quiz.courseId}'),
-                                child: const Text('Start'),
-                              ),
-                            ),
+                      ...quizzes.map((quiz) => QuizCard(
+                            quiz: quiz,
+                            mode: QuizCardMode.student,
+                            courseId: quiz.courseId,
                           )),
                     ],
                   );

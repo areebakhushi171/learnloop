@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class AppSpacing {
   const AppSpacing._();
 
+  static const double xxs = 2.0;
   static const double xs = 4.0;
   static const double sm = 8.0;
   static const double md = 12.0;
@@ -16,8 +17,10 @@ class AppSpacing {
   static const EdgeInsets edgeInsetsMd = EdgeInsets.all(md);
   static const EdgeInsets edgeInsetsLg = EdgeInsets.all(lg);
   static const EdgeInsets edgeInsetsXl = EdgeInsets.all(xl);
+  static const EdgeInsets edgeInsetsXxl = EdgeInsets.all(xxl);
 
-  static const EdgeInsets screenPadding = EdgeInsets.symmetric(horizontal: lg, vertical: lg);
+  static const EdgeInsets screenPadding = EdgeInsets.symmetric(horizontal: lg, vertical: md);
   static const EdgeInsets cardPadding = EdgeInsets.all(lg);
   static const EdgeInsets dialogPadding = EdgeInsets.all(xl);
+  static const EdgeInsets bottomSheetPadding = EdgeInsets.all(xl);
 }

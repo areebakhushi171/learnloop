@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_theme.dart';
+import '../../core/constants/app_spacing.dart';
+import '../../core/utils/snackbar_utils.dart';
 import '../widgets/common/app_app_bar.dart';
 import '../widgets/common/app_button.dart';
 import '../widgets/common/app_text_field.dart';
@@ -28,19 +29,22 @@ class _AdminAnnouncementsScreenState extends State<AdminAnnouncementsScreen> {
       appBar: const AppAppBar(title: 'Manage Announcements'),
       body: SingleChildScrollView(
         key: const PageStorageKey('admin_announcements_scroll_key'),
-        padding: const EdgeInsets.all(AppTheme.spaceLg),
+        padding: AppSpacing.screenPadding,
         child: Column(
           children: [
             AppTextField(controller: _titleController, label: 'Announcement Title'),
-            const SizedBox(height: AppTheme.spaceMd),
-            AppTextField(controller: _messageController, label: 'Message Body'),
-            const SizedBox(height: AppTheme.spaceXl),
+            const SizedBox(height: AppSpacing.md),
+            AppTextField(
+              controller: _messageController,
+              label: 'Message Body',
+              maxLines: 4,
+            ),
+            const SizedBox(height: AppSpacing.xl),
             AppButton(
               text: 'Post Announcement',
+              icon: Icons.campaign_rounded,
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Announcement posted successfully!'), backgroundColor: Colors.green),
-                );
+                SnackbarUtils.showSuccess(context, 'Announcement posted successfully!');
                 _titleController.clear();
                 _messageController.clear();
               },
